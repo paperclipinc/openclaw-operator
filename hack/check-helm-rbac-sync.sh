@@ -13,13 +13,18 @@ set -euo pipefail
 
 GENERATED="config/rbac/role.yaml"
 HELM="charts/openclaw-operator/templates/rbac.yaml"
+HELPERS="charts/openclaw-operator/templates/_helpers.tpl"
 
 if [ ! -f "$GENERATED" ]; then
-  echo "::error::Generated RBAC not found at $GENERATED — run 'make manifests' first"
+  echo "::error::Generated RBAC not found at $GENERATED -- run 'make manifests' first"
   exit 1
 fi
 if [ ! -f "$HELM" ]; then
   echo "::error::Helm chart RBAC not found at $HELM"
+  exit 1
+fi
+if [ ! -f "$HELPERS" ]; then
+  echo "::error::Helm chart helpers not found at $HELPERS"
   exit 1
 fi
 
@@ -57,13 +62,16 @@ parse_generated() {
   ' "$GENERATED" | sort -u
 }
 
-# Parse Helm chart ClusterRole (inline JSON arrays) into the same
-# "apiGroup|resource|verb" triple format.
-# Reads only the first YAML document (before ---) and skips Helm templates.
+# Parse the manager rules block out of _helpers.tpl. The block lives between
+# `{{- define "openclaw-operator.managerRules" -}}` and the matching `{{- end }}`.
+# rbac.yaml renders these rules into either a ClusterRole or per-namespace Roles
+# via `{{ include "openclaw-operator.managerRules" . | nindent 2 }}`, so the
+# helper is the single source of truth for what permissions the operator gets.
 parse_helm() {
   awk '
-    /^---/ { exit }
-    /\{\{/ { next }
+    /\{\{-? *define .openclaw-operator\.managerRules. *-?\}\}/ { in_rules = 1; next }
+    in_rules && /\{\{-? *end *-?\}\}/ { exit }
+    !in_rules { next }
     /^\s*#/ { next }
 
     /apiGroups:/ {
@@ -94,8 +102,16 @@ parse_helm() {
           for (v = 1; v <= nverbs; v++)
             print groups[g] "|" resources[r] "|" verbs[v]
     }
-  ' "$HELM" | sort -u
+  ' "$HELPERS" | sort -u
 }
+
+# Sanity-check that rbac.yaml actually renders the helper. If someone removes
+# the include we want the check to fail loudly rather than silently accept
+# matching helper rules that no template references.
+if ! grep -q 'openclaw-operator\.managerRules' "$HELM"; then
+  echo "::error::$HELM does not include the openclaw-operator.managerRules helper"
+  exit 1
+fi
 
 GENERATED_TRIPLES=$(parse_generated)
 HELM_TRIPLES=$(parse_helm)

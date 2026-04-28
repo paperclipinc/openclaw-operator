@@ -58,3 +58,92 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Manager rules. Single source of truth so the same set of permissions is
+rendered into the cluster-scoped ClusterRole or per-namespace Role.
+hack/check-helm-rbac-sync.sh asserts this set is a superset of the
+kubebuilder-generated config/rbac/role.yaml.
+*/}}
+{{- define "openclaw-operator.managerRules" -}}
+# Core API resources
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+# Apps API
+- apiGroups: ["apps"]
+  resources: ["statefulsets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch", "delete"]
+# Batch API (backup/restore Jobs, periodic backup CronJobs)
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create", "delete"]
+- apiGroups: ["batch"]
+  resources: ["cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# RBAC
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Networking
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies", "ingresses"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Policy
+- apiGroups: ["policy"]
+  resources: ["poddisruptionbudgets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Autoscaling
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Monitoring
+- apiGroups: ["monitoring.coreos.com"]
+  resources: ["servicemonitors", "prometheusrules"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# OpenClaw CRDs
+- apiGroups: ["openclaw.rocks"]
+  resources: ["openclawinstances"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["openclaw.rocks"]
+  resources: ["openclawinstances/status"]
+  verbs: ["get", "update", "patch"]
+- apiGroups: ["openclaw.rocks"]
+  resources: ["openclawinstances/finalizers"]
+  verbs: ["update"]
+# OpenClawSelfConfig CRD
+- apiGroups: ["openclaw.rocks"]
+  resources: ["openclawselfconfigs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["openclaw.rocks"]
+  resources: ["openclawselfconfigs/status"]
+  verbs: ["get", "update", "patch"]
+- apiGroups: ["openclaw.rocks"]
+  resources: ["openclawselfconfigs/finalizers"]
+  verbs: ["update"]
+# OpenClawClusterDefaults singleton (#457)
+- apiGroups: ["openclaw.rocks"]
+  resources: ["openclawclusterdefaults"]
+  verbs: ["get", "list", "watch"]
+{{- end }}

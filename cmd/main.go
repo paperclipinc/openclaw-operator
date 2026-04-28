@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -39,6 +40,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -73,6 +75,7 @@ func main() {
 	var enableHTTP2 bool
 	var otlpEndpoint string
 	var otlpInsecure bool
+	var watchNamespacesFlag string
 	var tlsOpts []func(*tls.Config)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable.")
@@ -82,6 +85,7 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false, "If set, HTTP/2 will be enabled for the metrics and webhook servers.")
 	flag.StringVar(&otlpEndpoint, "otlp-endpoint", "", "OTLP gRPC endpoint for metrics export (e.g. collector.observability.svc:4317). Also respects OTEL_EXPORTER_OTLP_ENDPOINT env var.")
 	flag.BoolVar(&otlpInsecure, "otlp-insecure", true, "If set, OTLP exporter connects without TLS.")
+	flag.StringVar(&watchNamespacesFlag, "watch-namespaces", "", "Comma-separated list of namespaces to watch. If empty, the operator watches all namespaces (cluster-scoped). Set this when running with namespaced RBAC.")
 
 	opts := zap.Options{
 		Development: true,
@@ -127,22 +131,40 @@ func main() {
 		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgrOpts := ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsServerOptions,
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "openclaw-operator.openclaw.rocks",
-	})
-	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
 	}
 
 	operatorNamespace := os.Getenv("POD_NAMESPACE")
 	if operatorNamespace == "" {
 		operatorNamespace = "openclaw-operator-system"
+	}
+
+	watchNamespaces := parseWatchNamespaces(watchNamespacesFlag)
+	if len(watchNamespaces) > 0 {
+		nsCfg := make(map[string]cache.Config, len(watchNamespaces)+1)
+		for _, ns := range watchNamespaces {
+			nsCfg[ns] = cache.Config{}
+		}
+		// Always include the operator's own namespace so it can read its
+		// backup credentials Secret and other operator-scoped resources
+		// (e.g. s3-backup-credentials).
+		if _, ok := nsCfg[operatorNamespace]; !ok {
+			nsCfg[operatorNamespace] = cache.Config{}
+		}
+		mgrOpts.Cache = cache.Options{DefaultNamespaces: nsCfg}
+		setupLog.Info("restricting watch to namespaces", "namespaces", watchNamespaces, "operatorNamespace", operatorNamespace)
+	}
+
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOpts)
+	if err != nil {
+		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
 	}
 
 	versionResolver := registry.NewResolver(5 * time.Minute)
@@ -228,6 +250,29 @@ func main() {
 			setupLog.Error(shutdownErr, "error shutting down OTLP metrics exporter")
 		}
 	}
+}
+
+// parseWatchNamespaces splits the --watch-namespaces flag value into a
+// deduplicated list of namespace names, dropping empty entries.
+func parseWatchNamespaces(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	seen := make(map[string]struct{})
+	out := make([]string, 0)
+	for _, ns := range strings.Split(raw, ",") {
+		ns = strings.TrimSpace(ns)
+		if ns == "" {
+			continue
+		}
+		if _, ok := seen[ns]; ok {
+			continue
+		}
+		seen[ns] = struct{}{}
+		out = append(out, ns)
+	}
+	return out
 }
 
 // setupOTLPMetrics configures an OTLP gRPC metrics exporter that bridges all
