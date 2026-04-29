@@ -147,6 +147,24 @@ helm install openclaw-operator \
   --create-namespace
 ```
 
+#### Helm RBAC scope
+
+| Value | Default | Meaning |
+|-------|---------|---------|
+| `rbac.create` | `true` | When `false`, the chart does not render manager, leader-election, or metrics RBAC. Provide your own Roles or ClusterRoles. |
+| `rbac.namespaced` | `false` | When `true`, workload permissions are **Roles** in each `rbac.watchNamespaces` entry (default: release namespace if the list is empty). A separate **ClusterRole** grants only `openclawclusterdefaults` **get/list/watch** (no cluster-wide Secrets or Deployments). The Deployment sets `OPENCLAW_WATCH_NAMESPACES` so the operator cache matches those namespaces. |
+| `rbac.watchNamespaces` | `[]` | Used when `rbac.namespaced` is `true`: namespaces where `OpenClawInstance` and managed objects run. The operator `ServiceAccount` stays in the release namespace; `RoleBinding` objects in each watched namespace reference it. |
+
+When `rbac.create` is `false` but you still use a namespace-scoped manager, set `OPENCLAW_WATCH_NAMESPACES` on the Deployment yourself so it matches your Roles.
+
+`OpenClawSelfConfig` CRs are read through the same restricted cache: place them in a watched namespace or the operator will not see them.
+
+Optional smoke test on a **local** cluster (for example kind): deploy with `rbac.namespaced=true` and a fixed namespace, then run:
+
+`E2E_NAMESPACED_RBAC=true E2E_NAMESPACED_RBAC_NAMESPACE=<ns> ginkgo run ./test/e2e/...`
+
+Repro script (build, `kind load image-archive`, Helm install, minimal CR): [hack/kind-verify-namespaced-rbac.sh](hack/kind-verify-namespaced-rbac.sh). Step-by-step notes: [docs/deployment.md](docs/deployment.md) (section **Verify namespaced RBAC on Kind**).
+
 <details>
 <summary>Alternative: install with Kustomize</summary>
 

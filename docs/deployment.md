@@ -92,6 +92,53 @@ kubectl get openclawinstance -n openclaw
 kubectl get pods -n openclaw
 ```
 
+### 7. Verify namespaced RBAC on Kind (optional)
+
+Use this when you want the operator **Role** in a workload namespace plus the small **clusterdefaults** **ClusterRole**, with `OPENCLAW_WATCH_NAMESPACES` set automatically (`rbac.namespaced=true`).
+
+When the manager cache is restricted to specific namespaces, **`OpenClawSelfConfig` objects must live in one of those namespaces** (the same informer cache applies to all controllers).
+
+1. Build and load the image. With **Podman**, `kind load docker-image` often fails; save a tarball and use `kind load image-archive` instead:
+
+```bash
+export KIND_CLUSTER_NAME=openclaw-dev   # same name as kind create cluster --name
+podman build -t localhost/openclaw-operator:dev .
+podman save localhost/openclaw-operator:dev -o /tmp/openclaw-operator-dev.tar
+kind load image-archive /tmp/openclaw-operator-dev.tar --name "${KIND_CLUSTER_NAME}"
+rm -f /tmp/openclaw-operator-dev.tar
+```
+
+2. Install Helm with namespaced RBAC (operator in `openclaw-system`, instances in `openclaw`). If CRDs are **already** on the cluster from a prior install, set `crds.install=false` once:
+
+```bash
+kubectl create namespace openclaw-system --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace openclaw --dry-run=client -o yaml | kubectl apply -f -
+
+helm upgrade --install openclaw-operator charts/openclaw-operator -n openclaw-system \
+  --set image.repository=localhost/openclaw-operator \
+  --set image.tag=dev \
+  --set image.pullPolicy=Never \
+  --set rbac.namespaced=true \
+  --set-json 'rbac.watchNamespaces=["openclaw"]' \
+  --set networkPolicy.enabled=false \
+  --set crds.install=false
+```
+
+3. Confirm env and RBAC:
+
+```bash
+kubectl get deploy -n openclaw-system -o jsonpath='{range .items[*].spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | grep OPENCLAW_WATCH_NAMESPACES
+kubectl get role,rolebinding -n openclaw
+kubectl get clusterrole | grep openclaw-operator | grep clusterdefaults
+```
+
+4. Scripted path: from the repo root, after `kubectl config use-context kind-<name>`:
+
+```bash
+export KIND_CLUSTER_NAME=<your-cluster-name>
+./hack/kind-verify-namespaced-rbac.sh
+```
+
 ### Cleanup
 
 ```bash

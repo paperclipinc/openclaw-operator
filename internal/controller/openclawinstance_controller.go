@@ -79,6 +79,9 @@ type OpenClawInstanceReconciler struct {
 	Scheme            *runtime.Scheme
 	Recorder          record.EventRecorder
 	OperatorNamespace string
+	// WatchNamespaces limits OpenClawInstance listing for cluster-defaults watch
+	// when the manager cache is restricted (OPENCLAW_WATCH_NAMESPACES). Empty means all namespaces.
+	WatchNamespaces   []string
 	VersionResolver   *registry.Resolver
 	SkillPackResolver *skillpacks.Resolver
 }
@@ -1902,12 +1905,37 @@ func (r *OpenClawInstanceReconciler) findInstancesForClusterDefaults(ctx context
 		return nil
 	}
 
+	if len(r.WatchNamespaces) == 0 {
+		return r.listAllOpenClawInstancesAsRequests(ctx)
+	}
+
+	seen := make(map[types.NamespacedName]struct{})
+	var requests []reconcile.Request
+	for _, ns := range r.WatchNamespaces {
+		instanceList := &openclawv1alpha1.OpenClawInstanceList{}
+		if err := r.List(ctx, instanceList, client.InNamespace(ns)); err != nil {
+			log.FromContext(ctx).Error(err, "Failed to list OpenClawInstances for OpenClawClusterDefaults watch", "namespace", ns)
+			continue
+		}
+		for i := range instanceList.Items {
+			instance := &instanceList.Items[i]
+			nn := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
+			if _, ok := seen[nn]; ok {
+				continue
+			}
+			seen[nn] = struct{}{}
+			requests = append(requests, reconcile.Request{NamespacedName: nn})
+		}
+	}
+	return requests
+}
+
+func (r *OpenClawInstanceReconciler) listAllOpenClawInstancesAsRequests(ctx context.Context) []reconcile.Request {
 	instanceList := &openclawv1alpha1.OpenClawInstanceList{}
 	if err := r.List(ctx, instanceList); err != nil {
 		log.FromContext(ctx).Error(err, "Failed to list OpenClawInstances for OpenClawClusterDefaults watch")
 		return nil
 	}
-
 	requests := make([]reconcile.Request, 0, len(instanceList.Items))
 	for i := range instanceList.Items {
 		instance := &instanceList.Items[i]

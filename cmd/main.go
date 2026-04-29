@@ -35,10 +35,12 @@ import (
 	otelmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
+	"k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -50,6 +52,7 @@ import (
 	"github.com/openclawrocks/openclaw-operator/internal/controller"
 	"github.com/openclawrocks/openclaw-operator/internal/registry"
 	"github.com/openclawrocks/openclaw-operator/internal/skillpacks"
+	"github.com/openclawrocks/openclaw-operator/internal/watchnamespaces"
 )
 
 // version is set at build time via ldflags (see .goreleaser.yaml).
@@ -127,14 +130,30 @@ func main() {
 		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	watchNS := watchnamespaces.FromEnv()
+	for _, ns := range watchNS {
+		if errs := validation.ValidateNamespaceName(ns, false); len(errs) > 0 {
+			setupLog.Error(fmt.Errorf("invalid OPENCLAW_WATCH_NAMESPACES entry %q: %v", ns, errs), "refusing to start manager")
+			os.Exit(1)
+		}
+	}
+	mgrOpts := ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsServerOptions,
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "openclaw-operator.openclaw.rocks",
-	})
+	}
+	if len(watchNS) > 0 {
+		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config, len(watchNS))
+		for _, ns := range watchNS {
+			mgrOpts.Cache.DefaultNamespaces[ns] = cache.Config{}
+		}
+		setupLog.Info("restricting informer cache to namespaces", "namespaces", watchNS)
+	}
+
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOpts)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -153,6 +172,7 @@ func main() {
 		Scheme:            mgr.GetScheme(),
 		Recorder:          mgr.GetEventRecorderFor("openclawinstance-controller"),
 		OperatorNamespace: operatorNamespace,
+		WatchNamespaces:   watchNS,
 		VersionResolver:   versionResolver,
 		SkillPackResolver: skillPackResolver,
 	}).SetupWithManager(mgr); err != nil {

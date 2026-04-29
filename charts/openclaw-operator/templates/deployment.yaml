@@ -66,6 +66,15 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            {{- if .Values.rbac.namespaced }}
+            {{- $l := .Values.rbac.watchNamespaces | default list }}
+            {{- $csv := .Release.Namespace }}
+            {{- if not (empty $l) }}
+            {{- $csv = join "," $l }}
+            {{- end }}
+            - name: OPENCLAW_WATCH_NAMESPACES
+              value: {{ $csv | quote }}
+            {{- end }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           ports:

@@ -126,3 +126,16 @@ networkPolicy:
 crds:
   install: true
   keep: true  # Keep CRDs when uninstalling the chart
+
+# RBAC for the operator Deployment ServiceAccount
+rbac:
+  # When false, the chart does not render manager, leader-election, or metrics RBAC.
+  # Supply your own Roles or ClusterRoles and align watchNamespaces with the manager cache.
+  create: true
+  # When true, use a Role (+RoleBinding) per watchNamespaces entry for workload APIs and
+  # a minimal ClusterRole (+ClusterRoleBinding) only for openclawclusterdefaults get/list/watch.
+  # When false, use a single ClusterRole with all rules (legacy behavior).
+  namespaced: false
+  # Namespaces where OpenClawInstance and managed resources live (namespaced mode only).
+  # If empty while namespaced is true, defaults to the chart release namespace.
+  watchNamespaces: []
