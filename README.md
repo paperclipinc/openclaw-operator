@@ -160,6 +160,42 @@ make deploy IMG=ghcr.io/openclaw-rocks/openclaw-operator:latest
 
 </details>
 
+<details>
+<summary>Restrict the operator to specific namespaces</summary>
+
+To run the operator with namespaced RBAC instead of cluster-wide permissions,
+list the namespaces it should watch. The chart switches from
+`ClusterRole`/`ClusterRoleBinding` to per-namespace `Role`/`RoleBinding`, and
+passes `--watch-namespaces` to the operator so its informer cache is scoped
+to that list (plus the operator's own namespace, for backup credentials).
+
+```bash
+helm install openclaw-operator \
+  oci://ghcr.io/openclaw-rocks/charts/openclaw-operator \
+  --namespace openclaw-operator-system \
+  --create-namespace \
+  --set 'watchNamespaces={team-a,team-b}'
+```
+
+Each listed namespace must already exist; the chart does not create them.
+
+To bring your own RBAC entirely (e.g. managed by a separate controller or
+SecurityCenter policy), disable chart-managed RBAC:
+
+```bash
+helm install openclaw-operator \
+  oci://ghcr.io/openclaw-rocks/charts/openclaw-operator \
+  --namespace openclaw-operator-system \
+  --create-namespace \
+  --set rbac.create=false
+```
+
+The kubebuilder markers in `internal/controller/` and the manager rules helper
+at `charts/openclaw-operator/templates/_helpers.tpl` document the minimum
+permission set the operator requires.
+
+</details>
+
 ### 2. Create a secret with your API keys
 
 ```yaml

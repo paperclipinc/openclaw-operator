@@ -50,6 +50,9 @@ spec:
             - --metrics-bind-address=0
             {{- end }}
             - --zap-log-level={{ .Values.logLevel }}
+            {{- if gt (len .Values.watchNamespaces) 0 }}
+            - --watch-namespaces={{ join "," .Values.watchNamespaces }}
+            {{- end }}
             {{- if .Values.otlp.enabled }}
             {{- if not .Values.otlp.endpoint }}
             {{- fail "otlp.endpoint is required when otlp.enabled is true" }}

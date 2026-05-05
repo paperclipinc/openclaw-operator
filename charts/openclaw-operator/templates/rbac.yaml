@@ -1,105 +1,65 @@
+{{- if .Values.rbac.create -}}
+{{- $managerName := printf "%s-manager-role" (include "openclaw-operator.fullname" .) -}}
+{{- $managerBinding := printf "%s-manager-rolebinding" (include "openclaw-operator.fullname" .) -}}
+{{- $saName := include "openclaw-operator.serviceAccountName" . -}}
+{{- $saNamespace := .Release.Namespace -}}
+{{- $labels := include "openclaw-operator.labels" . -}}
+{{- if gt (len .Values.watchNamespaces) 0 -}}
+{{- range $i, $ns := .Values.watchNamespaces }}
+{{- if gt $i 0 }}
+---
+{{- end }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $managerName }}
+  namespace: {{ $ns }}
+  labels:
+    {{- $labels | nindent 4 }}
+rules:
+  {{- include "openclaw-operator.managerRules" $ | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $managerBinding }}
+  namespace: {{ $ns }}
+  labels:
+    {{- $labels | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $managerName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $saName }}
+    namespace: {{ $saNamespace }}
+{{- end }}
+{{- else }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "openclaw-operator.fullname" . }}-manager-role
+  name: {{ $managerName }}
   labels:
-    {{- include "openclaw-operator.labels" . | nindent 4 }}
+    {{- $labels | nindent 4 }}
 rules:
-  # Core API resources
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "list", "watch", "create", "update", "patch"]
-  - apiGroups: [""]
-    resources: ["services"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: [""]
-    resources: ["serviceaccounts"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: [""]
-    resources: ["persistentvolumeclaims"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: [""]
-    resources: ["events"]
-    verbs: ["create", "patch"]
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "list", "watch"]
-  # Apps API
-  - apiGroups: ["apps"]
-    resources: ["statefulsets"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["apps"]
-    resources: ["deployments"]
-    verbs: ["get", "list", "watch", "delete"]
-  # Batch API (backup/restore Jobs, periodic backup CronJobs)
-  - apiGroups: ["batch"]
-    resources: ["jobs"]
-    verbs: ["get", "list", "watch", "create", "delete"]
-  - apiGroups: ["batch"]
-    resources: ["cronjobs"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  # RBAC
-  - apiGroups: ["rbac.authorization.k8s.io"]
-    resources: ["roles", "rolebindings"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  # Networking
-  - apiGroups: ["networking.k8s.io"]
-    resources: ["networkpolicies", "ingresses"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  # Policy
-  - apiGroups: ["policy"]
-    resources: ["poddisruptionbudgets"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  # Autoscaling
-  - apiGroups: ["autoscaling"]
-    resources: ["horizontalpodautoscalers"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  # Monitoring
-  - apiGroups: ["monitoring.coreos.com"]
-    resources: ["servicemonitors", "prometheusrules"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  # OpenClaw CRDs
-  - apiGroups: ["openclaw.rocks"]
-    resources: ["openclawinstances"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["openclaw.rocks"]
-    resources: ["openclawinstances/status"]
-    verbs: ["get", "update", "patch"]
-  - apiGroups: ["openclaw.rocks"]
-    resources: ["openclawinstances/finalizers"]
-    verbs: ["update"]
-  # OpenClawSelfConfig CRD
-  - apiGroups: ["openclaw.rocks"]
-    resources: ["openclawselfconfigs"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["openclaw.rocks"]
-    resources: ["openclawselfconfigs/status"]
-    verbs: ["get", "update", "patch"]
-  - apiGroups: ["openclaw.rocks"]
-    resources: ["openclawselfconfigs/finalizers"]
-    verbs: ["update"]
-  # OpenClawClusterDefaults singleton (#457)
-  - apiGroups: ["openclaw.rocks"]
-    resources: ["openclawclusterdefaults"]
-    verbs: ["get", "list", "watch"]
+  {{- include "openclaw-operator.managerRules" . | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "openclaw-operator.fullname" . }}-manager-rolebinding
+  name: {{ $managerBinding }}
   labels:
-    {{- include "openclaw-operator.labels" . | nindent 4 }}
+    {{- $labels | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "openclaw-operator.fullname" . }}-manager-role
+  name: {{ $managerName }}
 subjects:
   - kind: ServiceAccount
-    name: {{ include "openclaw-operator.serviceAccountName" . }}
-    namespace: {{ .Release.Namespace }}
+    name: {{ $saName }}
+    namespace: {{ $saNamespace }}
+{{- end }}
 {{- if .Values.leaderElection.enabled }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -107,7 +67,7 @@ kind: Role
 metadata:
   name: {{ include "openclaw-operator.fullname" . }}-leader-election-role
   labels:
-    {{- include "openclaw-operator.labels" . | nindent 4 }}
+    {{- $labels | nindent 4 }}
 rules:
   - apiGroups: [""]
     resources: ["configmaps"]
@@ -124,13 +84,14 @@ kind: RoleBinding
 metadata:
   name: {{ include "openclaw-operator.fullname" . }}-leader-election-rolebinding
   labels:
-    {{- include "openclaw-operator.labels" . | nindent 4 }}
+    {{- $labels | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: {{ include "openclaw-operator.fullname" . }}-leader-election-role
 subjects:
   - kind: ServiceAccount
-    name: {{ include "openclaw-operator.serviceAccountName" . }}
-    namespace: {{ .Release.Namespace }}
+    name: {{ $saName }}
+    namespace: {{ $saNamespace }}
+{{- end }}
 {{- end }}
