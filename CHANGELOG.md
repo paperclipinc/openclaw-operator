@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.0](https://github.com/openclaw-rocks/openclaw-operator/compare/v0.30.0...v0.31.0) (2026-05-05)
+
+
+### Features
+
+* **chart:** allow disabling chart RBAC and scoping operator to namespaces ([#469](https://github.com/openclaw-rocks/openclaw-operator/issues/469)) ([46abfa4](https://github.com/openclaw-rocks/openclaw-operator/commit/46abfa4756b6fcc82cd9b7b9e8a5a85fc4afb7a1))
+
 ## [0.30.0](https://github.com/openclaw-rocks/openclaw-operator/compare/v0.29.0...v0.30.0) (2026-04-24)
 
 
