@@ -171,6 +171,16 @@ type OpenClawInstanceSpec struct {
 	// Operator-managed annotations (e.g. config-hash) take precedence on conflict.
 	// +optional
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
+
+	// ShareProcessNamespace enables PID namespace sharing between all containers
+	// in the pod. When true, the infrastructure (pause) container becomes PID 1
+	// and automatically reaps zombie processes. This prevents zombie accumulation
+	// from long-running gateway pods that spawn background processes (git, plugins,
+	// QMD memory, shells) which become defunct under a Node.js PID 1 that does not
+	// call waitpid(). Defaults to true.
+	// +kubebuilder:default=true
+	// +optional
+	ShareProcessNamespace *bool `json:"shareProcessNamespace,omitempty"`
 }
 
 // ImageSpec defines the container image configuration

@@ -75,6 +75,7 @@ func BuildStatefulSet(instance *openclawv1alpha1.OpenClawInstance, gatewayTokenS
 					ServiceAccountName:            ServiceAccountName(instance),
 					DeprecatedServiceAccount:      ServiceAccountName(instance),
 					AutomountServiceAccountToken:  Ptr(instance.Spec.SelfConfigure.Enabled || instance.Spec.Tailscale.Enabled),
+					ShareProcessNamespace:         shareProcessNamespace(instance),
 					SecurityContext:               buildPodSecurityContext(instance),
 					InitContainers:                buildInitContainers(instance, externalWorkspaceFiles, additionalExternalFiles, skillPacks),
 					Containers:                    buildContainers(instance, gwSecretName),
@@ -138,6 +139,15 @@ func buildPodAnnotations(instance *openclawv1alpha1.OpenClawInstance, externalWo
 	}
 	annotations["openclaw.rocks/config-hash"] = calculateConfigHash(instance, externalWorkspaceFiles, additionalExternalFiles)
 	return annotations
+}
+
+// shareProcessNamespace returns the effective ShareProcessNamespace value.
+// Defaults to true (enables PID namespace sharing for zombie reaping).
+func shareProcessNamespace(instance *openclawv1alpha1.OpenClawInstance) *bool {
+	if instance.Spec.ShareProcessNamespace != nil {
+		return instance.Spec.ShareProcessNamespace
+	}
+	return Ptr(true)
 }
 
 // buildPodSecurityContext creates the pod-level security context

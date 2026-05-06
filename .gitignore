@@ -46,3 +46,4 @@ dist/
 
 # Claude Code worktrees
 .claude/worktrees/
+manager
