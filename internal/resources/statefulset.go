@@ -1014,19 +1014,90 @@ func buildSkillsInitContainer(instance *openclawv1alpha1.OpenClawInstance) *core
 	}
 }
 
-// parsePluginEntry returns the shell command to install a single plugin entry.
-// Entries are npm package names. An optional "npm:" prefix is stripped.
-// Installs into the PVC-backed ~/.openclaw/ node_modules via `npm install`.
+// pluginInstallHelper is a POSIX-sh function that installs an npm-published
+// OpenClaw plugin into ~/.openclaw/extensions/<name>/.
+//
+// The OpenClaw gateway discovers plugins as direct subdirectories of
+// ~/.openclaw/extensions (see openclaw/openclaw src/plugins/discovery.ts:
+// node_modules is in SCANNED_DIRECTORY_IGNORE_NAMES, and the loader only scans
+// one level deep). So `npm install <pkg>` from ~/.openclaw — which places the
+// package under ~/.openclaw/node_modules/<pkg> — was never auto-discovered.
+//
+// The helper:
+//  1. Stages an `npm pack <spec>` to a tmp dir (extracts the published package).
+//  2. Runs `npm install --omit=dev` inside the extracted dir to populate its
+//     own node_modules with runtime deps. Per-plugin isolation; deps are
+//     resolved by Node from each plugin's local node_modules without needing
+//     NODE_PATH.
+//  3. Atomically replaces ~/.openclaw/extensions/<dir_name>/ via rename of a
+//     staged sibling, so a partial/failed install is never visible to the
+//     gateway.
+//
+// Lifecycle scripts are disabled globally for this container via
+// NPM_CONFIG_IGNORE_SCRIPTS=true (set on the container env, not here).
+const pluginInstallHelper = `_install_plugin() (
+  set -e
+  spec="$1"
+  dir_name="$2"
+  dest="/home/openclaw/.openclaw/extensions/$dir_name"
+
+  stage=$(mktemp -d)
+  trap 'rm -rf "$stage"' EXIT INT TERM
+
+  cd "$stage"
+  tarball=$(npm pack "$spec" --silent | tail -n 1)
+  mkdir extracted
+  tar -xzf "$tarball" -C extracted --strip-components=1
+  ( cd extracted && npm install --omit=dev --no-audit --no-fund --loglevel=error )
+
+  mkdir -p "$(dirname "$dest")"
+  rm -rf "$dest" "$dest.tmp"
+  mv "$stage/extracted" "$dest.tmp"
+  mv "$dest.tmp" "$dest"
+)`
+
+// pluginDirName derives the on-disk directory name for an npm package spec.
+// The OpenClaw plugin loader uses the package's package.json `name` (with
+// scope stripped) as the canonical id, so the directory name should match the
+// unscoped package name to keep IDs stable.
+//
+// Examples:
+//
+//	"brave-plugin"                     -> "brave-plugin"
+//	"@openclaw/brave-plugin"           -> "brave-plugin"
+//	"brave-plugin@1.2.3"               -> "brave-plugin"
+//	"@openclaw/brave-plugin@1.2.3"     -> "brave-plugin"
+//	"npm:@openclaw/brave-plugin@1.2.3" -> "brave-plugin"
+func pluginDirName(spec string) string {
+	if after, ok := strings.CutPrefix(spec, "npm:"); ok {
+		spec = after
+	}
+	// Strip a trailing version selector. The leading "@" of a scope is at
+	// index 0, so look for "@" only after the first character.
+	if idx := strings.LastIndex(spec, "@"); idx > 0 {
+		spec = spec[:idx]
+	}
+	if strings.HasPrefix(spec, "@") {
+		if slash := strings.Index(spec, "/"); slash != -1 {
+			spec = spec[slash+1:]
+		}
+	}
+	return spec
+}
+
+// parsePluginEntry returns the shell command(s) to install a single plugin
+// entry. Entries are npm package specs. An optional "npm:" prefix is stripped.
+// Installs into the PVC-backed ~/.openclaw/extensions/<name>/ directory, which
+// is the layout the OpenClaw gateway's plugin discovery expects (#474).
 func parsePluginEntry(entry string) string {
 	pkg := entry
 	if after, ok := strings.CutPrefix(entry, "npm:"); ok {
 		pkg = after
 	}
-	return fmt.Sprintf("cd /home/openclaw/.openclaw && npm install %s", shellQuote(pkg))
+	return fmt.Sprintf("_install_plugin %s %s", shellQuote(pkg), shellQuote(pluginDirName(entry)))
 }
 
 // BuildPluginsScript generates the shell script for the plugins init container.
-// Each entry produces an `npm install` command.
 // Entries are sorted for determinism. Returns "" if no plugins are defined.
 func BuildPluginsScript(instance *openclawv1alpha1.OpenClawInstance) string {
 	plugins := instance.Spec.Plugins
@@ -1038,8 +1109,11 @@ func BuildPluginsScript(instance *openclawv1alpha1.OpenClawInstance) string {
 	copy(sorted, plugins)
 	sort.Strings(sorted)
 
-	var lines []string
-	lines = append(lines, "set -e")
+	lines := []string{
+		"set -e",
+		"mkdir -p /home/openclaw/.openclaw/extensions",
+		pluginInstallHelper,
+	}
 	for _, plugin := range sorted {
 		lines = append(lines, parsePluginEntry(plugin))
 	}

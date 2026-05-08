@@ -6036,7 +6036,7 @@ func TestBuildStatefulSet_SkillsOnly_HasBothInitContainers(t *testing.T) {
 
 func TestParsePluginEntry_Basic(t *testing.T) {
 	got := parsePluginEntry("@martian-engineering/lossless-claw")
-	want := "cd /home/openclaw/.openclaw && npm install '@martian-engineering/lossless-claw'"
+	want := "_install_plugin '@martian-engineering/lossless-claw' 'lossless-claw'"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -6044,7 +6044,7 @@ func TestParsePluginEntry_Basic(t *testing.T) {
 
 func TestParsePluginEntry_WithNpmPrefix(t *testing.T) {
 	got := parsePluginEntry("npm:@openclaw/some-plugin")
-	want := "cd /home/openclaw/.openclaw && npm install '@openclaw/some-plugin'"
+	want := "_install_plugin '@openclaw/some-plugin' 'some-plugin'"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -6052,9 +6052,42 @@ func TestParsePluginEntry_WithNpmPrefix(t *testing.T) {
 
 func TestParsePluginEntry_Unscoped(t *testing.T) {
 	got := parsePluginEntry("some-plugin")
-	want := "cd /home/openclaw/.openclaw && npm install 'some-plugin'"
+	want := "_install_plugin 'some-plugin' 'some-plugin'"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestParsePluginEntry_Versioned(t *testing.T) {
+	cases := []struct {
+		entry, want string
+	}{
+		{"brave-plugin@1.2.3", "_install_plugin 'brave-plugin@1.2.3' 'brave-plugin'"},
+		{"@openclaw/brave-plugin@1.2.3", "_install_plugin '@openclaw/brave-plugin@1.2.3' 'brave-plugin'"},
+		{"npm:@openclaw/brave-plugin@1.2.3", "_install_plugin '@openclaw/brave-plugin@1.2.3' 'brave-plugin'"},
+	}
+	for _, c := range cases {
+		if got := parsePluginEntry(c.entry); got != c.want {
+			t.Errorf("parsePluginEntry(%q) = %q, want %q", c.entry, got, c.want)
+		}
+	}
+}
+
+func TestPluginDirName(t *testing.T) {
+	cases := []struct {
+		spec, want string
+	}{
+		{"brave-plugin", "brave-plugin"},
+		{"@openclaw/brave-plugin", "brave-plugin"},
+		{"brave-plugin@1.2.3", "brave-plugin"},
+		{"@openclaw/brave-plugin@1.2.3", "brave-plugin"},
+		{"npm:@openclaw/brave-plugin@1.2.3", "brave-plugin"},
+		{"@martian-engineering/lossless-claw", "lossless-claw"},
+	}
+	for _, c := range cases {
+		if got := pluginDirName(c.spec); got != c.want {
+			t.Errorf("pluginDirName(%q) = %q, want %q", c.spec, got, c.want)
+		}
 	}
 }
 
@@ -6075,11 +6108,42 @@ func TestBuildPluginsScript_WithPlugins(t *testing.T) {
 	if !strings.HasPrefix(script, "set -e\n") {
 		t.Error("script should start with set -e")
 	}
-	if !strings.Contains(script, "npm install '@martian-engineering/lossless-claw'") {
-		t.Error("script should contain npm install for lossless-claw")
+	// Issue #474: plugins must be installed under ~/.openclaw/extensions/, not node_modules
+	if !strings.Contains(script, "mkdir -p /home/openclaw/.openclaw/extensions") {
+		t.Error("script should ensure ~/.openclaw/extensions exists")
 	}
-	if !strings.Contains(script, "npm install 'another-plugin'") {
-		t.Error("script should contain npm install for another-plugin")
+	if !strings.Contains(script, "_install_plugin() (") {
+		t.Error("script should define the _install_plugin helper")
+	}
+	if !strings.Contains(script, "_install_plugin '@martian-engineering/lossless-claw' 'lossless-claw'") {
+		t.Error("script should call _install_plugin for lossless-claw with the unscoped dir name")
+	}
+	if !strings.Contains(script, "_install_plugin 'another-plugin' 'another-plugin'") {
+		t.Error("script should call _install_plugin for another-plugin")
+	}
+	// Regression guard: don't emit the old broken layout
+	if strings.Contains(script, "cd /home/openclaw/.openclaw && npm install") {
+		t.Error("script must not install plugins into ~/.openclaw/node_modules (issue #474)")
+	}
+}
+
+func TestBuildPluginsScript_StagesViaNpmPack(t *testing.T) {
+	instance := newTestInstance("stage-plugins")
+	instance.Spec.Plugins = []string{"some-plugin"}
+
+	script := BuildPluginsScript(instance)
+
+	// Helper must use npm pack + atomic rename to avoid leaving partial state
+	// visible to the gateway's plugin discovery.
+	for _, want := range []string{
+		`npm pack "$spec"`,
+		`tar -xzf "$tarball"`,
+		`npm install --omit=dev`,
+		`mv "$dest.tmp" "$dest"`,
+	} {
+		if !strings.Contains(script, want) {
+			t.Errorf("install helper missing %q\nfull script:\n%s", want, script)
+		}
 	}
 }
 
@@ -6088,17 +6152,22 @@ func TestBuildPluginsScript_Deterministic(t *testing.T) {
 	instance.Spec.Plugins = []string{"z-plugin", "a-plugin"}
 
 	script := BuildPluginsScript(instance)
-	lines := strings.Split(script, "\n")
 
-	// After "set -e", entries should be sorted alphabetically
-	if len(lines) != 3 {
-		t.Fatalf("expected 3 lines, got %d: %v", len(lines), lines)
+	// Find the lines that invoke the install helper for our plugins.
+	var pluginCalls []string
+	for _, line := range strings.Split(script, "\n") {
+		if strings.HasPrefix(line, "_install_plugin '") {
+			pluginCalls = append(pluginCalls, line)
+		}
 	}
-	if !strings.Contains(lines[1], "a-plugin") {
-		t.Errorf("expected a-plugin first, got %q", lines[1])
+	if len(pluginCalls) != 2 {
+		t.Fatalf("expected 2 _install_plugin calls, got %d: %v", len(pluginCalls), pluginCalls)
 	}
-	if !strings.Contains(lines[2], "z-plugin") {
-		t.Errorf("expected z-plugin second, got %q", lines[2])
+	if !strings.Contains(pluginCalls[0], "'a-plugin'") {
+		t.Errorf("expected a-plugin first, got %q", pluginCalls[0])
+	}
+	if !strings.Contains(pluginCalls[1], "'z-plugin'") {
+		t.Errorf("expected z-plugin second, got %q", pluginCalls[1])
 	}
 }
 
