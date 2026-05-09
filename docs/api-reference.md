@@ -232,7 +232,11 @@ spec:
     - "some-other-plugin"
 ```
 
-Plugins are installed via `npm install` in a dedicated `init-plugins` init container. They are stored in the PVC-backed `~/.openclaw/node_modules` directory and persist across pod restarts.
+Plugins are installed in a dedicated `init-plugins` init container into `~/.openclaw/extensions/<name>/`, where `<name>` is the unscoped npm package basename (so `@openclaw/brave-plugin` becomes `~/.openclaw/extensions/brave-plugin/`). This is the layout the OpenClaw gateway's plugin discovery walks - subdirectories of `~/.openclaw/extensions/` containing a `package.json`, bundle manifest, or default entry file are auto-loaded, while `node_modules/` is explicitly skipped by the loader.
+
+The init container stages each install via `npm pack` into a tmp dir, runs `npm install --omit=dev` in the extracted package to populate per-plugin runtime deps, and then atomically renames the result into place so a partial/failed install is never visible to the gateway. The PVC backs `~/.openclaw/`, so installs persist across pod restarts.
+
+> Migrating from earlier operator versions (<= 0.31.0): plugins were installed under `~/.openclaw/node_modules/<pkg>/` and were not auto-discovered. Users typically worked around this by adding `plugins.load.paths` entries to their gateway config pointing at the node_modules path. Once upgraded, that workaround can be removed - plugins land in the documented `~/.openclaw/extensions/<name>/` location and the gateway picks them up automatically. The stale node_modules entries are left in place to avoid disturbing other PVC state and are harmless.
 
 ### spec.envFrom
 

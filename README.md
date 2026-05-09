@@ -520,7 +520,7 @@ The operator resolves packs via the GitHub Contents + Git Trees APIs (cached for
 
 ### Plugin installation
 
-Install plugins declaratively. The operator runs a dedicated init container that installs each plugin via `npm install` before the agent starts:
+Install plugins declaratively. The operator runs a dedicated init container that installs each plugin into `~/.openclaw/extensions/<name>/` before the agent starts, where `<name>` is the unscoped npm package basename (so `@openclaw/brave-plugin` becomes `~/.openclaw/extensions/brave-plugin/`):
 
 ```yaml
 spec:
@@ -529,7 +529,11 @@ spec:
     - "some-other-plugin"
 ```
 
-npm lifecycle scripts are disabled globally on the init container (`NPM_CONFIG_IGNORE_SCRIPTS=true`) to mitigate supply chain attacks. Plugins are installed into the PVC-backed `~/.openclaw/node_modules` directory and persist across pod restarts.
+This is the layout the OpenClaw gateway's plugin discovery expects - it scans direct subdirectories of `~/.openclaw/extensions/` for plugin manifests and skips `node_modules/` entirely. Each install is staged via `npm pack`, populated with its runtime dependencies via `npm install --omit=dev`, and atomically renamed into place so a partial install is never visible to the gateway.
+
+npm lifecycle scripts are disabled globally on the init container (`NPM_CONFIG_IGNORE_SCRIPTS=true`) to mitigate supply chain attacks. The PVC backs `~/.openclaw/`, so installs persist across pod restarts.
+
+> If you previously worked around the install-path bug by adding `plugins.load.paths` entries to your gateway config (pointing at `~/.openclaw/node_modules/<pkg>`), that workaround is no longer needed and can be removed - plugins now land in the documented location and are auto-discovered.
 
 ### Workspace seeding
 

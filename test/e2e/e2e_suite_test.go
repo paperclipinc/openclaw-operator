@@ -2024,10 +2024,17 @@ var _ = Describe("OpenClawInstance Controller", func() {
 			}
 			Expect(pluginsContainer).NotTo(BeNil(), "init-plugins container should exist")
 
-			// Script should contain npm install for plugin
+			// Script must install via _install_plugin into ~/.openclaw/extensions/
+			// (issue #474 - the previous `cd ~/.openclaw && npm install` layout
+			// landed plugins in node_modules/, which the gateway loader
+			// explicitly skips).
 			script := pluginsContainer.Command[2]
-			Expect(script).To(ContainSubstring("npm install '@martian-engineering/lossless-claw'"),
-				"plugin should use npm install")
+			Expect(script).To(ContainSubstring("mkdir -p /home/openclaw/.openclaw/extensions"),
+				"init-plugins must ensure the extensions directory exists")
+			Expect(script).To(ContainSubstring("_install_plugin '@martian-engineering/lossless-claw' 'lossless-claw'"),
+				"plugin should be installed via _install_plugin into the unscoped extensions/<name> dir")
+			Expect(script).NotTo(ContainSubstring("cd /home/openclaw/.openclaw && npm install"),
+				"plugins must not be installed into ~/.openclaw/node_modules (issue #474)")
 
 			// NPM_CONFIG_IGNORE_SCRIPTS should be set
 			envMap := map[string]string{}
