@@ -1,0 +1,56 @@
+{{- /*
+Aggregated ClusterRoles that extend the built-in Kubernetes admin/edit/view
+ClusterRoles with permissions for OpenClaw CRDs. Without these, a user
+bound to the standard `admin` ClusterRole in a namespace cannot manage
+OpenClawInstance / OpenClawSelfConfig resources in that namespace
+(see issue #479).
+
+Only namespaced CRDs are aggregated here. OpenClawClusterDefaults is
+cluster-scoped and is intentionally not added to namespace-level roles;
+cluster-admins already have access via cluster-admin / system:masters.
+*/ -}}
+{{- if and .Values.rbac.create .Values.rbac.aggregateToDefaultRoles -}}
+{{- $fullname := include "openclaw-operator.fullname" . -}}
+{{- $labels := include "openclaw-operator.labels" . -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $fullname }}-aggregate-to-admin
+  labels:
+    {{- $labels | nindent 4 }}
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+  - apiGroups: ["openclaw.rocks"]
+    resources:
+      - openclawinstances
+      - openclawselfconfigs
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $fullname }}-aggregate-to-edit
+  labels:
+    {{- $labels | nindent 4 }}
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+rules:
+  - apiGroups: ["openclaw.rocks"]
+    resources:
+      - openclawinstances
+      - openclawselfconfigs
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $fullname }}-aggregate-to-view
+  labels:
+    {{- $labels | nindent 4 }}
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+rules:
+  - apiGroups: ["openclaw.rocks"]
+    resources:
+      - openclawinstances
+      - openclawselfconfigs
+    verbs: ["get", "list", "watch"]
+{{- end }}

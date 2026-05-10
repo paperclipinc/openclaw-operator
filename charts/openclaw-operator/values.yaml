@@ -25,6 +25,13 @@ rbac:
   # Whether the chart should render the operator's RBAC (ClusterRole/Role
   # and bindings). Set to false to disable and supply your own out-of-band.
   create: true
+  # Whether to install aggregated ClusterRoles that extend the built-in
+  # Kubernetes admin/edit/view ClusterRoles with permissions for the
+  # OpenClaw CRDs. With this enabled, users bound to the standard
+  # `admin`/`edit`/`view` ClusterRole in a namespace can manage
+  # OpenClawInstance and OpenClawSelfConfig resources in that namespace.
+  # Disable if your cluster manages CRD access via a separate policy.
+  aggregateToDefaultRoles: true
 
 # Restrict the operator to a fixed list of namespaces. When empty (default),
 # the operator watches OpenClawInstance resources cluster-wide and the chart
