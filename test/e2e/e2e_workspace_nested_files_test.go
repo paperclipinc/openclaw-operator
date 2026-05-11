@@ -125,7 +125,7 @@ var _ = Describe("Workspace initialFiles with nested paths", func() {
 			Expect(script).To(ContainSubstring(
 				"cp /workspace-init/'skills--redmine--SKILL.md' /data/workspace/'skills/redmine/SKILL.md'"))
 
-			// The pre-fix behaviour surfaced an "InvalidFilename" /
+			// The pre-fix behavior surfaced an "InvalidFilename" /
 			// "ReconcileFailed" event referencing the ConfigMap "Invalid value"
 			// error. The fact that we reached this point with the StatefulSet
 			// and workspace ConfigMap created already proves the fix; verify
