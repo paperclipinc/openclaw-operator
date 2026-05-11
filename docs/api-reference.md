@@ -86,7 +86,7 @@ Configures initial workspace files seeded into the instance. Files are copied on
 | Field                  | Type                      | Default | Description                                                                                       |
 |------------------------|---------------------------|---------|---------------------------------------------------------------------------------------------------|
 | `configMapRef`         | `ConfigMapNameSelector`   | --      | Reference to an external ConfigMap whose keys become workspace files. See sub-fields below. |
-| `initialFiles`         | `map[string]string`       | --      | Maps filenames to their content. Each file is written to the workspace directory only if it does not already exist. Max 50 entries. |
+| `initialFiles`         | `map[string]string`       | --      | Maps file paths to their content. Each file is written to the workspace directory only if it does not already exist. Keys may contain `/` for nested paths (e.g. `agents/AGENT.md`); the operator encodes them as ConfigMap-safe keys (`/` → `--`) and the init container recreates the directory layout when seeding. Path safety rules: max 253 chars, no `\`, no `..` segment, no segment starting with `.`, no leading or trailing `/`. `openclaw.json` is reserved at the root. Max 50 entries. |
 | `initialDirectories`   | `[]string`                | --      | Directories to create (`mkdir -p`) inside the workspace directory. Nested paths like `tools/scripts` are allowed. Max 20 items. |
 | `additionalWorkspaces` | `[]AdditionalWorkspace`   | --      | Additional agent workspaces for multi-agent setups. Each entry seeds files to `~/.openclaw/workspace-<name>/`. Max 10 items. See sub-fields below. |
 | `bootstrap`            | `BootstrapSpec`           | --      | Controls operator-managed `BOOTSTRAP.md` injection. See sub-fields below. |
@@ -132,7 +132,7 @@ Each entry configures a named workspace for a secondary agent. The operator seed
 |--------------------|-------------------------|---------|---------------------------------------------------------------------------------------------------|
 | `name`             | `string`                | --      | **(Required)** Workspace identifier. Must be a DNS label (`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`), max 63 chars. Seeds to `~/.openclaw/workspace-<name>/`. |
 | `configMapRef`     | `ConfigMapNameSelector` | --      | Reference to an external ConfigMap whose keys become workspace files. |
-| `initialFiles`     | `map[string]string`     | --      | Maps filenames to their content. Max 50 entries. |
+| `initialFiles`     | `map[string]string`     | --      | Maps file paths to their content. Same path rules as the default workspace `initialFiles`, including support for nested paths like `agents/AGENT.md`. Max 50 entries. |
 | `initialDirectories` | `[]string`            | --      | Directories to create inside this workspace. Max 20 items. |
 
 Per-workspace merge priority (highest wins): operator-injected `ENVIRONMENT.md` > inline `initialFiles` > external `configMapRef`. Note: `BOOTSTRAP.md`, self-configure files, and skill packs are only injected into the default workspace.

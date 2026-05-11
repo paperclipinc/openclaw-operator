@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"path"
 	"sort"
 	"strings"
 
@@ -733,38 +734,57 @@ func BuildInitScript(instance *openclawv1alpha1.OpenClawInstance, externalWorksp
 	// Collect all workspace file names from both user-defined and operator-injected sources
 	hasFiles := hasWorkspaceFiles(instance, skillPacks)
 	if hasFiles {
-		allFiles := make(map[string]bool)
-		// External configMapRef files
+		// Flat (single-segment) seeds share source and destination filenames.
+		// User initialFiles paths that contain '/' need encoded source keys
+		// and explicit mkdir -p of the parent directory; collect them
+		// separately and emit them in their own loop below.
+		flatFiles := make(map[string]bool)
+		var nestedUserPaths []string
+		// External configMapRef files (keys are always flat)
 		for name := range externalWorkspaceFiles {
-			allFiles[name] = true
+			flatFiles[name] = true
 		}
 		if ws != nil {
 			for name := range ws.InitialFiles {
-				allFiles[name] = true
+				if strings.Contains(name, "/") {
+					nestedUserPaths = append(nestedUserPaths, name)
+				} else {
+					flatFiles[name] = true
+				}
 			}
 		}
 		// Always inject operator files
-		allFiles["ENVIRONMENT.md"] = true
+		flatFiles["ENVIRONMENT.md"] = true
 		// BOOTSTRAP.md injection is opt-out (#463).
 		if bootstrapEnabled(instance) {
-			allFiles["BOOTSTRAP.md"] = true
+			flatFiles["BOOTSTRAP.md"] = true
 		}
 		if instance.Spec.SelfConfigure.Enabled {
-			allFiles["SELFCONFIG.md"] = true
-			allFiles["selfconfig.sh"] = true
+			flatFiles["SELFCONFIG.md"] = true
+			flatFiles["selfconfig.sh"] = true
 		}
 
 		// Ensure the workspace directory exists (may not on first run with emptyDir)
 		lines = append(lines, "mkdir -p /data/workspace")
 		// Sort keys for deterministic output
-		sorted := make([]string, 0, len(allFiles))
-		for name := range allFiles {
+		sorted := make([]string, 0, len(flatFiles))
+		for name := range flatFiles {
 			sorted = append(sorted, name)
 		}
 		sort.Strings(sorted)
 		for _, name := range sorted {
 			q := shellQuote(name)
 			lines = append(lines, fmt.Sprintf("[ -f /data/workspace/%s ] || cp /workspace-init/%s /data/workspace/%s", q, q, q))
+		}
+
+		// Nested user initialFiles: encoded ConfigMap key, mkdir parent, cp to original path (#482).
+		sort.Strings(nestedUserPaths)
+		for _, wsPath := range nestedUserPaths {
+			cmKey := SkillPackCMKey(wsPath)
+			lines = append(lines,
+				fmt.Sprintf("mkdir -p /data/workspace/%s", shellQuote(path.Dir(wsPath))),
+				fmt.Sprintf("[ -f /data/workspace/%s ] || cp /workspace-init/%s /data/workspace/%s",
+					shellQuote(wsPath), shellQuote(cmKey), shellQuote(wsPath)))
 		}
 
 		// Skill pack files use mapped paths (ConfigMap key differs from workspace path)
@@ -803,25 +823,32 @@ func BuildInitScript(instance *openclawv1alpha1.OpenClawInstance, externalWorksp
 				lines = append(lines, fmt.Sprintf("mkdir -p /data/%s/%s", shellQuote(wsDir), shellQuote(dir)))
 			}
 
-			// Collect all file names for this workspace
-			awFiles := make(map[string]bool)
+			// Collect file names for this workspace. Flat names map source→dest 1:1;
+			// nested user initialFiles paths need parent-dir creation and encoded
+			// ConfigMap keys (#482).
+			flatNames := make(map[string]bool)
+			var nestedAWPaths []string
 
-			// External configMapRef files
+			// External configMapRef files (keys are always flat)
 			if extFiles, ok := additionalExternalFiles[aw.Name]; ok {
 				for name := range extFiles {
-					awFiles[name] = true
+					flatNames[name] = true
 				}
 			}
 			// Inline initialFiles
 			for name := range aw.InitialFiles {
-				awFiles[name] = true
+				if strings.Contains(name, "/") {
+					nestedAWPaths = append(nestedAWPaths, name)
+				} else {
+					flatNames[name] = true
+				}
 			}
 			// Operator-injected ENVIRONMENT.md
-			awFiles["ENVIRONMENT.md"] = true
+			flatNames["ENVIRONMENT.md"] = true
 
-			// Seed files (only if not present)
-			sorted := make([]string, 0, len(awFiles))
-			for name := range awFiles {
+			// Seed flat files (only if not present)
+			sorted := make([]string, 0, len(flatNames))
+			for name := range flatNames {
 				sorted = append(sorted, name)
 			}
 			sort.Strings(sorted)
@@ -831,6 +858,18 @@ func BuildInitScript(instance *openclawv1alpha1.OpenClawInstance, externalWorksp
 					shellQuote(wsDir), shellQuote(name),
 					shellQuote(cmKey),
 					shellQuote(wsDir), shellQuote(name)))
+			}
+
+			// Seed nested user initialFiles (#482).
+			sort.Strings(nestedAWPaths)
+			for _, wsPath := range nestedAWPaths {
+				cmKey := AdditionalWorkspaceCMKey(aw.Name, SkillPackCMKey(wsPath))
+				lines = append(lines,
+					fmt.Sprintf("mkdir -p /data/%s/%s", shellQuote(wsDir), shellQuote(path.Dir(wsPath))),
+					fmt.Sprintf("[ -f /data/%s/%s ] || cp /workspace-init/%s /data/%s/%s",
+						shellQuote(wsDir), shellQuote(wsPath),
+						shellQuote(cmKey),
+						shellQuote(wsDir), shellQuote(wsPath)))
 			}
 		}
 	}

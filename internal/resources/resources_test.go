@@ -4586,6 +4586,71 @@ func TestBuildWorkspaceConfigMap_WithFiles(t *testing.T) {
 	}
 }
 
+// TestBuildWorkspaceConfigMap_NestedInitialFiles verifies that user-defined
+// initialFiles paths containing '/' are stored under ConfigMap-safe keys
+// (slashes encoded as '--'), since Kubernetes rejects '/' in data keys (#482).
+func TestBuildWorkspaceConfigMap_NestedInitialFiles(t *testing.T) {
+	instance := newTestInstance("ws-nested")
+	instance.Spec.Workspace = &openclawv1alpha1.WorkspaceSpec{
+		InitialFiles: map[string]string{
+			"agents/AGENT.md":         "# Agent",
+			"skills/redmine/SKILL.md": "# Skill",
+			"SOUL.md":                 "# Soul",
+		},
+	}
+
+	cm := BuildWorkspaceConfigMap(instance, nil, nil, nil)
+	if cm == nil {
+		t.Fatal("expected non-nil ConfigMap")
+	}
+	if got, want := cm.Data["agents--AGENT.md"], "# Agent"; got != want {
+		t.Errorf("encoded key agents--AGENT.md: got %q, want %q", got, want)
+	}
+	if got, want := cm.Data["skills--redmine--SKILL.md"], "# Skill"; got != want {
+		t.Errorf("encoded key skills--redmine--SKILL.md: got %q, want %q", got, want)
+	}
+	// Flat keys must remain unchanged.
+	if got, want := cm.Data["SOUL.md"], "# Soul"; got != want {
+		t.Errorf("flat key SOUL.md: got %q, want %q", got, want)
+	}
+	// Raw nested keys must not appear (Kubernetes would reject them).
+	for k := range cm.Data {
+		if strings.Contains(k, "/") {
+			t.Errorf("ConfigMap data key %q contains '/' which is invalid", k)
+		}
+	}
+}
+
+// TestBuildWorkspaceConfigMap_AdditionalWorkspaceNestedFiles verifies that
+// nested initialFiles inside additionalWorkspaces are also encoded (#482).
+func TestBuildWorkspaceConfigMap_AdditionalWorkspaceNestedFiles(t *testing.T) {
+	instance := newTestInstance("ws-aw-nested")
+	instance.Spec.Workspace = &openclawv1alpha1.WorkspaceSpec{
+		AdditionalWorkspaces: []openclawv1alpha1.AdditionalWorkspace{
+			{
+				Name: "research",
+				InitialFiles: map[string]string{
+					"docs/PLAN.md": "# Plan",
+				},
+			},
+		},
+	}
+
+	cm := BuildWorkspaceConfigMap(instance, nil, nil, nil)
+	if cm == nil {
+		t.Fatal("expected non-nil ConfigMap")
+	}
+	want := AdditionalWorkspaceCMKey("research", "docs--PLAN.md")
+	if got := cm.Data[want]; got != "# Plan" {
+		t.Errorf("key %q: got %q, want %q", want, got, "# Plan")
+	}
+	for k := range cm.Data {
+		if strings.Contains(k, "/") {
+			t.Errorf("ConfigMap data key %q contains '/'", k)
+		}
+	}
+}
+
 // TestBuildWorkspaceConfigMap_BootstrapDisabled verifies that setting
 // spec.workspace.bootstrap.enabled=false suppresses the operator-injected
 // BOOTSTRAP.md. OpenClaw deletes the file after applying it, so re-seeding
@@ -4916,6 +4981,60 @@ func TestBuildInitScript_ShellQuotesSpecialChars(t *testing.T) {
 	expected := "cp /config/'openclaw.json' /data/openclaw.json\nmkdir -p /data/workspace\n[ -f /data/workspace/'BOOTSTRAP.md' ] || cp /workspace-init/'BOOTSTRAP.md' /data/workspace/'BOOTSTRAP.md'\n[ -f /data/workspace/'ENVIRONMENT.md' ] || cp /workspace-init/'ENVIRONMENT.md' /data/workspace/'ENVIRONMENT.md'\n[ -f /data/workspace/'it'\\''s a file.md' ] || cp /workspace-init/'it'\\''s a file.md' /data/workspace/'it'\\''s a file.md'"
 	if script != expected {
 		t.Errorf("unexpected script:\ngot:  %q\nwant: %q", script, expected)
+	}
+}
+
+// TestBuildInitScript_NestedInitialFiles verifies that nested initialFiles
+// paths produce a `mkdir -p` of the parent and a `cp` from the encoded source
+// key to the original workspace path (#482).
+func TestBuildInitScript_NestedInitialFiles(t *testing.T) {
+	instance := newTestInstance("init-nested")
+	instance.Spec.Workspace = &openclawv1alpha1.WorkspaceSpec{
+		InitialFiles: map[string]string{
+			"agents/AGENT.md":         "# Agent",
+			"skills/redmine/SKILL.md": "# Skill",
+		},
+	}
+
+	script := BuildInitScript(instance, nil, nil, nil)
+	wants := []string{
+		"mkdir -p /data/workspace/'agents'",
+		"mkdir -p /data/workspace/'skills/redmine'",
+		"[ -f /data/workspace/'agents/AGENT.md' ] || cp /workspace-init/'agents--AGENT.md' /data/workspace/'agents/AGENT.md'",
+		"[ -f /data/workspace/'skills/redmine/SKILL.md' ] || cp /workspace-init/'skills--redmine--SKILL.md' /data/workspace/'skills/redmine/SKILL.md'",
+	}
+	for _, w := range wants {
+		if !strings.Contains(script, w) {
+			t.Errorf("script missing %q\n%s", w, script)
+		}
+	}
+}
+
+// TestBuildInitScript_AdditionalWorkspaceNestedFiles verifies nested seeding
+// works for additionalWorkspaces too (#482).
+func TestBuildInitScript_AdditionalWorkspaceNestedFiles(t *testing.T) {
+	instance := newTestInstance("init-aw-nested")
+	instance.Spec.Workspace = &openclawv1alpha1.WorkspaceSpec{
+		AdditionalWorkspaces: []openclawv1alpha1.AdditionalWorkspace{
+			{
+				Name: "research",
+				InitialFiles: map[string]string{
+					"docs/PLAN.md": "# Plan",
+				},
+			},
+		},
+	}
+
+	script := BuildInitScript(instance, nil, nil, nil)
+	expectedCMKey := AdditionalWorkspaceCMKey("research", "docs--PLAN.md")
+	wants := []string{
+		"mkdir -p /data/'workspace-research'/'docs'",
+		"[ -f /data/'workspace-research'/'docs/PLAN.md' ] || cp /workspace-init/'" + expectedCMKey + "' /data/'workspace-research'/'docs/PLAN.md'",
+	}
+	for _, w := range wants {
+		if !strings.Contains(script, w) {
+			t.Errorf("script missing %q\n%s", w, script)
+		}
 	}
 }
 

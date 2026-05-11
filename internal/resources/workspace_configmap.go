@@ -30,8 +30,8 @@ const additionalWorkspaceKeySep = "--ws--"
 
 // BuildWorkspaceConfigMap creates a ConfigMap containing workspace seed files.
 // Returns nil if the instance has no workspace files (user-defined, operator-injected, or skill packs).
-// Skill pack files use ConfigMap-safe keys (/ replaced with --); the init script
-// maps them back to the correct workspace paths.
+// Skill pack files and inline initialFiles paths use ConfigMap-safe keys (/ replaced
+// with --); the init script maps them back to the correct workspace paths.
 //
 // externalFiles are the resolved contents of spec.workspace.configMapRef (may be nil).
 // additionalExternalFiles maps workspace name to resolved configMapRef contents (may be nil).
@@ -51,15 +51,18 @@ func BuildWorkspaceConfigMap(instance *openclawv1alpha1.OpenClawInstance, extern
 		}
 	}
 
-	// 3. External configMapRef entries
+	// 3. External configMapRef entries (keys already flat — ConfigMap data
+	// keys cannot contain '/').
 	for k, v := range externalFiles {
 		files[k] = v
 	}
 
-	// 2. User-defined inline workspace files
+	// 2. User-defined inline workspace files. Keys may contain '/' (nested
+	// paths) which is illegal for ConfigMap data keys, so encode them the same
+	// way skill packs do (#482).
 	if instance.Spec.Workspace != nil {
 		for k, v := range instance.Spec.Workspace.InitialFiles {
-			files[k] = v
+			files[SkillPackCMKey(k)] = v
 		}
 	}
 
@@ -95,9 +98,10 @@ func BuildWorkspaceConfigMap(instance *openclawv1alpha1.OpenClawInstance, extern
 				}
 			}
 
-			// 2. Inline initialFiles (overrides external)
+			// 2. Inline initialFiles (overrides external). Encode '/' in the
+			// filename portion before namespacing it under the workspace (#482).
 			for k, v := range ws.InitialFiles {
-				files[AdditionalWorkspaceCMKey(ws.Name, k)] = v
+				files[AdditionalWorkspaceCMKey(ws.Name, SkillPackCMKey(k))] = v
 			}
 
 			// 1. ENVIRONMENT.md only (no BOOTSTRAP.md for secondary agents)

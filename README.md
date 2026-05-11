@@ -550,7 +550,13 @@ spec:
       README.md: |
         # My Workspace
         This workspace is managed by OpenClaw.
+      agents/AGENT.md: |              # nested paths are supported
+        # Agent
+      skills/redmine/SKILL.md: |
+        # Skill
 ```
+
+Keys may contain `/` for nested files; the operator encodes them for ConfigMap storage and recreates the directory layout when seeding the workspace. The same path safety rules as `initialDirectories` apply (no leading `/`, no `..`, no segment starting with `.`).
 
 **External ConfigMap reference:**
 

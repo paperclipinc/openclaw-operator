@@ -304,7 +304,7 @@ func validateWorkspaceSpec(ws *openclawv1alpha1.WorkspaceSpec) error {
 	}
 
 	for name := range ws.InitialFiles {
-		if err := resources.ValidateWorkspaceFilename(name); err != nil {
+		if err := resources.ValidateWorkspaceFilePath(name); err != nil {
 			return fmt.Errorf("workspace initialFiles key %q: %w", name, err)
 		}
 	}
@@ -332,7 +332,7 @@ func validateWorkspaceSpec(ws *openclawv1alpha1.WorkspaceSpec) error {
 			return fmt.Errorf("additionalWorkspaces[%d] %q configMapRef.name must not be empty", i, aw.Name)
 		}
 		for name := range aw.InitialFiles {
-			if err := resources.ValidateWorkspaceFilename(name); err != nil {
+			if err := resources.ValidateWorkspaceFilePath(name); err != nil {
 				return fmt.Errorf("additionalWorkspaces[%d] %q initialFiles key %q: %w", i, aw.Name, name, err)
 			}
 		}
