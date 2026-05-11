@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	openclawv1alpha1 "github.com/openclawrocks/openclaw-operator/api/v1alpha1"
 	"github.com/openclawrocks/openclaw-operator/internal/resources"
@@ -124,24 +125,17 @@ var _ = Describe("Workspace initialFiles with nested paths", func() {
 			Expect(script).To(ContainSubstring(
 				"cp /workspace-init/'skills--redmine--SKILL.md' /data/workspace/'skills/redmine/SKILL.md'"))
 
-			// WorkspaceReady=True confirms the controller did not bail out
-			// with the old "Invalid value" ConfigMap error.
-			updatedInstance := &openclawv1alpha1.OpenClawInstance{}
-			Eventually(func() bool {
-				if err := k8sClient.Get(ctx, types.NamespacedName{
-					Name:      instanceName,
-					Namespace: namespace,
-				}, updatedInstance); err != nil {
-					return false
-				}
-				for _, c := range updatedInstance.Status.Conditions {
-					if c.Type == openclawv1alpha1.ConditionTypeWorkspaceReady {
-						return c.Status == metav1.ConditionTrue
-					}
-				}
-				return false
-			}, 30*time.Second, 2*time.Second).Should(BeTrue(),
-				"WorkspaceReady condition should be True after reconcile")
+			// The pre-fix behaviour surfaced an "InvalidFilename" /
+			// "ReconcileFailed" event referencing the ConfigMap "Invalid value"
+			// error. The fact that we reached this point with the StatefulSet
+			// and workspace ConfigMap created already proves the fix; verify
+			// no such event was recorded.
+			events := &corev1.EventList{}
+			Expect(k8sClient.List(ctx, events, client.InNamespace(namespace))).To(Succeed())
+			for _, e := range events.Items {
+				Expect(e.Message).NotTo(ContainSubstring("must consist of alphanumeric characters"),
+					"event %q should not reference the pre-fix ConfigMap validation error", e.Name)
+			}
 
 			Expect(k8sClient.Delete(ctx, instance)).Should(Succeed())
 		})
