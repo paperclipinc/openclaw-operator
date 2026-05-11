@@ -63,7 +63,9 @@ func FilterNonPackSkills(skills []string) []string {
 }
 
 // SkillPackCMKey converts a workspace-relative path to a ConfigMap-safe key.
-// Replaces "/" with "--" to comply with ConfigMap key naming rules.
+// Replaces "/" with "--" to comply with ConfigMap key naming rules. Also used
+// for inline spec.workspace.initialFiles paths that contain '/' (#482); the
+// init script decodes the key back to the original path when seeding.
 func SkillPackCMKey(wsPath string) string {
 	return strings.ReplaceAll(wsPath, "/", "--")
 }

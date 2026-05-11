@@ -22,8 +22,11 @@ import (
 )
 
 // ValidateWorkspaceFilename checks a single workspace filename.
-// Exported so both the webhook and the controller can validate filenames
-// (e.g. keys from an external ConfigMap referenced by spec.workspace.configMapRef).
+// Used for keys from an external ConfigMap referenced by spec.workspace.configMapRef,
+// where Kubernetes itself enforces that keys cannot contain '/'.
+//
+// For inline spec.workspace.initialFiles use ValidateWorkspaceFilePath, which
+// permits nested paths (the operator encodes them into ConfigMap-safe keys).
 func ValidateWorkspaceFilename(name string) error {
 	if name == "" {
 		return fmt.Errorf("filename must not be empty")
@@ -45,6 +48,52 @@ func ValidateWorkspaceFilename(name string) error {
 	}
 	if name == "openclaw.json" {
 		return fmt.Errorf("filename 'openclaw.json' is reserved for config")
+	}
+	return nil
+}
+
+// ValidateWorkspaceFilePath checks a workspace-relative file path. Unlike
+// ValidateWorkspaceFilename it allows '/' so callers can seed nested files
+// (e.g. "agents/AGENT.md"). The operator encodes '/' as '--' when storing the
+// content in a ConfigMap and decodes it back when seeding the workspace
+// (issue #482).
+//
+// Path safety rules (apply per segment as well as overall):
+//   - non-empty, max 253 chars
+//   - no backslashes
+//   - no ".." segment (or substring inside any segment)
+//   - no leading or trailing "/", no empty segments
+//   - no segment starting with "." (hidden file/dir)
+//   - "openclaw.json" reserved at the root only
+func ValidateWorkspaceFilePath(path string) error {
+	if path == "" {
+		return fmt.Errorf("path must not be empty")
+	}
+	if len(path) > 253 {
+		return fmt.Errorf("path must be at most 253 characters")
+	}
+	if strings.Contains(path, "\\") {
+		return fmt.Errorf("path must not contain '\\'")
+	}
+	if strings.HasPrefix(path, "/") {
+		return fmt.Errorf("path must not be absolute")
+	}
+	if strings.HasSuffix(path, "/") {
+		return fmt.Errorf("path must not end with '/'")
+	}
+	if path == "openclaw.json" {
+		return fmt.Errorf("path 'openclaw.json' is reserved for config")
+	}
+	for _, seg := range strings.Split(path, "/") {
+		if seg == "" {
+			return fmt.Errorf("path must not contain empty segments")
+		}
+		if strings.Contains(seg, "..") {
+			return fmt.Errorf("path segment %q must not contain '..'", seg)
+		}
+		if strings.HasPrefix(seg, ".") {
+			return fmt.Errorf("path segment %q must not start with '.'", seg)
+		}
 	}
 	return nil
 }

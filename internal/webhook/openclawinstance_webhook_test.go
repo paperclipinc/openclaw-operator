@@ -969,19 +969,46 @@ func TestValidateCreate_WorkspaceNil(t *testing.T) {
 	}
 }
 
-func TestValidateCreate_WorkspaceFileSlash(t *testing.T) {
+func TestValidateCreate_WorkspaceFileNestedPath(t *testing.T) {
+	// Nested paths in initialFiles must be accepted; the operator encodes '/'
+	// as '--' for ConfigMap storage and decodes it back in the init script (#482).
 	v := &OpenClawInstanceValidator{}
 	instance := newTestInstance()
 	instance.Spec.Workspace = &openclawv1alpha1.WorkspaceSpec{
-		InitialFiles: map[string]string{"sub/file.md": "content"},
+		InitialFiles: map[string]string{
+			"agents/AGENT.md":         "# Agent",
+			"skills/redmine/SKILL.md": "# Skill",
+		},
 	}
 
 	_, err := v.ValidateCreate(context.Background(), instance)
-	if err == nil {
-		t.Fatal("expected error for filename with '/'")
+	if err != nil {
+		t.Fatalf("expected nested initialFiles paths to be accepted, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "/") {
-		t.Fatalf("error should mention '/', got: %v", err)
+}
+
+func TestValidateCreate_WorkspaceFileNestedRejected(t *testing.T) {
+	v := &OpenClawInstanceValidator{}
+	cases := []struct {
+		name string
+		path string
+	}{
+		{"absolute", "/etc/passwd"},
+		{"trailing slash", "agents/"},
+		{"empty segment", "agents//AGENT.md"},
+		{"dotdot segment", "agents/../escape.md"},
+		{"hidden middle segment", "agents/.secret/AGENT.md"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			instance := newTestInstance()
+			instance.Spec.Workspace = &openclawv1alpha1.WorkspaceSpec{
+				InitialFiles: map[string]string{tc.path: "content"},
+			}
+			if _, err := v.ValidateCreate(context.Background(), instance); err == nil {
+				t.Fatalf("expected error for path %q", tc.path)
+			}
+		})
 	}
 }
 
