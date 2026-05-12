@@ -349,6 +349,22 @@ spec:
       key: ca-bundle.crt
 ```
 
+### spec.shareProcessNamespace
+
+| Field                   | Type    | Default | Description                                                                                                                                                                                                                                                                                                                                                                          |
+|-------------------------|---------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `shareProcessNamespace` | `*bool` | `true`  | When `true`, all containers in the pod share a PID namespace. The Kubernetes `pause` container becomes PID 1 and reaps zombie processes, preventing accumulation of defunct helpers (QMD, git, plugins, shells) under a Node.js gateway that does not call `waitpid()`. Set to `false` to keep per-container PID isolation; you are then responsible for reaping zombies in-image. |
+
+**Security implication.** With PID-namespace sharing enabled, every container in the pod can see and signal every other container's processes. A compromised sidecar (Tailscale, Ollama, browser, custom) could send signals to the gateway and vice versa. For most deployments this is an acceptable trade-off for zombie reaping; if your threat model assumes mutually distrusting sidecars, disable this and add a `tini`/`dumb-init` wrapper to your main image instead.
+
+**Upgrade note.** Existing instances created before this field existed will have `nil` in their stored spec. The operator treats `nil` as `true`, so the next reconcile rolls the pod template to enable sharing. Plan a maintenance window if you operate a large fleet.
+
+```yaml
+# Opt out of shared PID namespace
+spec:
+  shareProcessNamespace: false
+```
+
 ### spec.storage
 
 Persistent storage configuration.

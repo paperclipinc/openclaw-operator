@@ -1292,6 +1292,47 @@ func TestBuildStatefulSet_RuntimeClassName_Unset(t *testing.T) {
 	}
 }
 
+func TestBuildStatefulSet_ShareProcessNamespace_DefaultsTrue(t *testing.T) {
+	instance := newTestInstance("spn-default")
+
+	sts := BuildStatefulSet(instance, "", nil, nil, nil)
+	podSpec := sts.Spec.Template.Spec
+
+	if podSpec.ShareProcessNamespace == nil {
+		t.Fatal("expected ShareProcessNamespace to be set when field unset")
+	}
+	if !*podSpec.ShareProcessNamespace {
+		t.Error("ShareProcessNamespace should default to true")
+	}
+}
+
+func TestBuildStatefulSet_ShareProcessNamespace_ExplicitTrue(t *testing.T) {
+	instance := newTestInstance("spn-true")
+	instance.Spec.ShareProcessNamespace = Ptr(true)
+
+	sts := BuildStatefulSet(instance, "", nil, nil, nil)
+	podSpec := sts.Spec.Template.Spec
+
+	if podSpec.ShareProcessNamespace == nil || !*podSpec.ShareProcessNamespace {
+		t.Errorf("ShareProcessNamespace = %v, want true", podSpec.ShareProcessNamespace)
+	}
+}
+
+func TestBuildStatefulSet_ShareProcessNamespace_ExplicitFalse(t *testing.T) {
+	instance := newTestInstance("spn-false")
+	instance.Spec.ShareProcessNamespace = Ptr(false)
+
+	sts := BuildStatefulSet(instance, "", nil, nil, nil)
+	podSpec := sts.Spec.Template.Spec
+
+	if podSpec.ShareProcessNamespace == nil {
+		t.Fatal("expected ShareProcessNamespace to be set")
+	}
+	if *podSpec.ShareProcessNamespace {
+		t.Error("ShareProcessNamespace should be false when explicitly disabled")
+	}
+}
+
 func TestBuildStatefulSet_PodAnnotations_UserAnnotationsPresent(t *testing.T) {
 	instance := newTestInstance("pod-ann-test")
 	instance.Spec.PodAnnotations = map[string]string{
