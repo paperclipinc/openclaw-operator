@@ -76,6 +76,7 @@ Lower-confidence ideas that aren't actively being worked:
 - **AI provider health monitoring** -- surface upstream API/model availability as a CR condition.
 - **Cost-aware sizing** -- recommend or auto-tune resource requests/limits from observed usage.
 - **Sandboxed runtimes** -- first-class gVisor / Kata recipes (the field exists today; what's missing is verified Chromium-under-gVisor support and an example deployment).
+- **`kubernetes-sigs/agent-sandbox` as deployment alternative** -- opt-in via a future `spec.deployment.strategy: Sandbox` field, sitting alongside the default StatefulSet. The unique wins are `SandboxWarmPool` (multi-tenant SaaS provisioning latency) and native hibernation with shutdown policies (idle-cost optimization). **Gated on upstream graduation**: trigger is when [Epic #740](https://github.com/kubernetes-sigs/agent-sandbox/issues/740) lands and a release ships the `v1beta1` API. Today the upstream is still `v1alpha1` with active breaking changes; stacking our `v1alpha1` on theirs would compound API instability.
 - **`OpenClawInstance` templates / presets** -- opinionated starting points for common LLM provider setups, layered on top of `OpenClawClusterDefaults`.
 
 If any of these become priorities, they get promoted into Active focus with concrete scope.
