@@ -94,6 +94,11 @@ extra:
     provider: mike
     default: latest
   cname: docs-operator.openclaw.rocks
+  analytics:
+    provider: custom
+  analytics_keys:
+    ahrefs: !ENV [AHREFS_KEY, '']
+    posthog: !ENV [POSTHOG_KEY, '']
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/openclaw-rocks/openclaw-operator
