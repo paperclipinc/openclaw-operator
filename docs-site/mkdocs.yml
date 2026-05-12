@@ -90,6 +90,9 @@ markdown_extensions:
       base_path:
         - ..
 
+hooks:
+  - hooks/llms_txt.py
+
 validation:
   links:
     not_found: ignore
