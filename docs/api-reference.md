@@ -1192,10 +1192,6 @@ See the dedicated [Full Example](full-example.md) page.
 **Scope**: Cluster
 **Short name**: `occd`
 
-Cluster-scoped singleton that fills in unset fields on every `OpenClawInstance` at reconcile time. The name **must** be `cluster` - any other name is ignored so typos do not silently churn the fleet. Changes to the singleton trigger re-reconciliation of every existing instance.
-
-**Precedence**: per-instance fields always win. A cluster default is only applied when the corresponding instance field is unset. This means the defaults are invisible in `kubectl get openclawinstance -o yaml` (they never get written back into the stored instance) - to introspect what will actually render, look at the resulting StatefulSet or ConfigMap.
-
 ### Spec fields
 
 | Field | Type | Description |
