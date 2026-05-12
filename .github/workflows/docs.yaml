@@ -1,0 +1,72 @@
+name: Docs
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag to (re)publish (e.g. v0.33.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: docs-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish versioned docs to gh-pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine ref
+        id: ref
+        run: |
+          REF="${{ github.event.release.tag_name || inputs.version }}"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ref.outputs.ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: docs-site/requirements.txt
+
+      - name: Install Cairo (Material social plugin dep)
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev libfreetype6-dev
+
+      - name: Install docs deps
+        run: pip install -r docs-site/requirements.txt
+
+      - name: Configure git for mike commits
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin gh-pages --depth=1 || true
+
+      - name: Extract version components
+        id: ver
+        run: |
+          TAG="${{ steps.ref.outputs.ref }}"
+          FULL="${TAG#v}"
+          SHORT=$(echo "$FULL" | cut -d. -f1,2)
+          echo "full=$FULL" >> "$GITHUB_OUTPUT"
+          echo "short=$SHORT" >> "$GITHUB_OUTPUT"
+
+      - name: Mike deploy
+        working-directory: docs-site
+        run: |
+          mike deploy --push --update-aliases \
+            "${{ steps.ver.outputs.short }}" latest \
+            --title "v${{ steps.ver.outputs.full }}"
+
+      - name: Mike set default
+        working-directory: docs-site
+        run: mike set-default --push latest
