@@ -152,11 +152,13 @@ After modifying types in `api/v1alpha1/openclawinstance_types.go`:
   ```
 
 ### Documentation
-When adding or changing CRD fields, features, or behavior, **always** update both:
-- `README.md` -- user-facing overview, examples, and feature table
-- `docs/api-reference.md` -- exhaustive field-level reference for every spec and status field
 
-Both files must stay in sync with the types in `api/v1alpha1/openclawinstance_types.go`.
+When adding or changing CRD fields, features, or behavior:
+
+- **`README.md`** -- update the user-facing overview, examples, and the feature table.
+- **`docs/api-reference.md`** is **auto-generated** from CRD types via `make api-docs`. Do NOT hand-edit it. After modifying types in `api/v1alpha1/`, run `make manifests api-docs` and commit the regenerated reference together with the type change. CI (`API Docs Sync` job) blocks any PR where running `make api-docs` would produce a diff.
+
+The docs site (mkdocs-material) lives in `docs-site/`. See `docs-site/README.md` for local preview and contributor flow.
 
 ## CI Pipeline
 
@@ -169,6 +171,7 @@ All checks run on every push to main and every PR:
 | **Security Scan** | gosec + Trivy (CRITICAL/HIGH) |
 | **Reconcile Guard** | Grep check preventing bare `r.Update()` on managed resources |
 | **Helm RBAC Sync** | Verifies Helm chart ClusterRole contains all kubebuilder RBAC permissions |
+| **API Docs Sync** | Verifies `docs/api-reference.md` matches output of `make api-docs` |
 | **Build** | Multi-arch Docker image (amd64 + arm64), pushes on main only |
 | **E2E** | Kind cluster tests (PRs and main) |
 
