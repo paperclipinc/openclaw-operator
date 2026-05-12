@@ -72,8 +72,8 @@ jobs:
           git fetch origin gh-pages
           git checkout gh-pages
           echo "docs-operator.openclaw.rocks" > CNAME
-          if ! git diff --quiet CNAME 2>/dev/null; then
-            git add CNAME
+          git add CNAME
+          if ! git diff --cached --quiet; then
             git commit -m "chore: ensure CNAME for docs-operator.openclaw.rocks"
             git push origin gh-pages
           fi
