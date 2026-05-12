@@ -928,7 +928,7 @@ spec:
 |---------------|----------|---------|---------------------------------------------------------------------------------------------------|
 | `restoreFrom` | `string` | --      | S3 path to restore data from (e.g., `backups/{tenantId}/{instanceId}/{timestamp}`). When set, the operator restores PVC data from this path before creating the StatefulSet. Works on both existing and new instances (enabling clone/migrate workflows). Cleared automatically after successful restore. Requires the `s3-backup-credentials` Secret to be present in the operator namespace. |
 
-See the [Backup and Restore](backup-restore.md) guide for full setup instructions, including [clone/migrate workflows](backup-restore.md#clone-migrate-an-instance).
+See the [Backup and Restore guide](backup-restore.md) for full setup instructions including clone and migrate workflows.
 
 ### spec.runtimeDeps
 
@@ -1115,7 +1115,7 @@ Tracks the state of automatic version updates.
 
 ## Backup and Restore
 
-See the dedicated [Backup and Restore](backup-restore.md) guide.
+See the [Backup and Restore guide](backup-restore.md) for S3 credentials, scheduled backups, restore, clone/migrate, and Workload Identity setup.
 
 ---
 
@@ -1174,13 +1174,13 @@ An `OpenClawSelfConfig` represents a request from an agent to modify its own `Op
 | `message`        | `string`      | Human-readable details about the current phase.              |
 | `completionTime` | `*metav1.Time`| Timestamp when the request reached a terminal phase.         |
 
-See the [OpenClawSelfConfig guide](openclawselfconfig.md) for lifecycle, server-side apply behavior, protected resources, and an example.
+See the [OpenClawSelfConfig guide](openclaw-self-config.md) for lifecycle, server-side apply behavior, protected resources, and an example.
 
 ---
 
 ## Full Example
 
-See the dedicated [Full Example](full-example.md) page.
+See the [Full Example](full-example.md) page for a complete annotated OpenClawInstance YAML.
 
 ---
 
@@ -1206,7 +1206,7 @@ See the dedicated [Full Example](full-example.md) page.
 | `runtimeDeps.pnpm` | `bool` | When true, opts every instance into the pnpm runtime init container unless the instance has already set it true. Booleans are OR-merged because `unset` and `false` are indistinguishable. |
 | `runtimeDeps.python` | `bool` | Same OR-merge semantics for the Python/uv runtime init container. |
 
-See the [OpenClawClusterDefaults guide](openclawclusterdefaults.md) for an example and field behavior notes.
+See the [OpenClawClusterDefaults guide](openclaw-cluster-defaults.md) for an example and behavior notes.
 
 ### Status fields
 

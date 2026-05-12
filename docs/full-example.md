@@ -1,6 +1,6 @@
 ---
 title: Full Example
-description: An annotated end-to-end OpenClawInstance YAML demonstrating most spec fields.
+description: An end-to-end OpenClawInstance YAML demonstrating most spec fields.
 ---
 
 # Full Example
