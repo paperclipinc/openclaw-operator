@@ -46,3 +46,8 @@ dist/
 
 # Claude Code worktrees
 .claude/worktrees/
+
+# Docs site
+docs-site/.venv/
+docs-site/site/
+bin/crd-ref-docs

@@ -1,0 +1,89 @@
+site_name: OpenClaw Operator
+site_url: https://openclaw.rocks/docs/operator/
+site_description: Kubernetes operator for managing OpenClaw AI agent instances with production-grade security, observability, and lifecycle management.
+site_author: OpenClaw.rocks
+repo_url: https://github.com/openclaw-rocks/openclaw-operator
+repo_name: openclaw-rocks/openclaw-operator
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; OpenClaw.rocks
+
+docs_dir: ../docs
+exclude_docs: |
+  specs/
+
+theme:
+  name: material
+  custom_dir: overrides
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - content.action.view
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - awesome-pages
+  - include-markdown
+  - git-revision-date-localized:
+      type: timeago
+      fallback_to_build_date: true
+      strict: false
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path:
+        - ..
+
+validation:
+  links:
+    not_found: ignore
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/openclaw-rocks/openclaw-operator

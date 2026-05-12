@@ -928,7 +928,7 @@ spec:
 |---------------|----------|---------|---------------------------------------------------------------------------------------------------|
 | `restoreFrom` | `string` | --      | S3 path to restore data from (e.g., `backups/{tenantId}/{instanceId}/{timestamp}`). When set, the operator restores PVC data from this path before creating the StatefulSet. Works on both existing and new instances (enabling clone/migrate workflows). Cleared automatically after successful restore. Requires the `s3-backup-credentials` Secret to be present in the operator namespace. |
 
-See [Backup and Restore](#backup-and-restore) for full setup instructions, including [clone/migrate workflows](#clone--migrate-an-instance).
+See [Backup and Restore](#backup-and-restore) for full setup instructions, including [clone/migrate workflows](#clone-migrate-an-instance).
 
 ### spec.runtimeDeps
 
@@ -1152,7 +1152,7 @@ stringData:
 |---------|-----------|
 | **Pre-delete backup** | Always runs when a CR is deleted, unless `openclaw.rocks/skip-backup: "true"` annotation is set or persistence is disabled. Subject to `spec.backup.timeout` (default: 30m) - if the backup does not complete within the timeout, it is skipped and deletion proceeds. |
 | **Pre-update backup** | Runs before each auto-update when `spec.autoUpdate.backupBeforeUpdate: true` (the default). |
-| **Periodic (scheduled)** | Runs on a cron schedule when `spec.backup.schedule` is set. See [Periodic scheduled backups](#periodic--scheduled-backups) below. |
+| **Periodic (scheduled)** | Runs on a cron schedule when `spec.backup.schedule` is set. See [Periodic scheduled backups](#periodic-scheduled-backups) below. |
 
 If the `s3-backup-credentials` Secret does not exist, pre-delete and pre-update backups are silently skipped (deletion and updates proceed normally), and the periodic backup CronJob is not created (a `ScheduledBackupReady=False` condition is set with reason `S3CredentialsMissing`).
 

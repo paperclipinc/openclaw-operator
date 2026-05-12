@@ -172,6 +172,24 @@ $(OPERATOR_SDK): $(LOCALBIN)
 	chmod +x $(OPERATOR_SDK); \
 	}
 
+##@ Docs Site
+
+.PHONY: docs-venv
+docs-venv: docs-site/.venv/bin/activate ## Create the docs-site Python virtualenv
+docs-site/.venv/bin/activate: docs-site/requirements.txt
+	python3 -m venv docs-site/.venv
+	docs-site/.venv/bin/pip install --upgrade pip
+	docs-site/.venv/bin/pip install -r docs-site/requirements.txt
+	touch docs-site/.venv/bin/activate
+
+.PHONY: docs-serve
+docs-serve: docs-venv ## Run the docs site locally (http://127.0.0.1:8000)
+	docs-site/.venv/bin/mkdocs serve -f docs-site/mkdocs.yml
+
+.PHONY: docs-build
+docs-build: docs-venv ## Build the docs site (strict mode -- fails on broken links / warnings)
+	docs-site/.venv/bin/mkdocs build --strict -f docs-site/mkdocs.yml
+
 # go-install-tool will 'go install' any package with custom target and target version.
 define go-install-tool
 @[ -f $(1) ] || { \
