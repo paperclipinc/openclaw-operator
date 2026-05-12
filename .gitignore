@@ -50,4 +50,8 @@ dist/
 # Docs site
 docs-site/.venv/
 docs-site/site/
+docs-site/.cache/
+__pycache__/
+*.pyc
+.cache/
 bin/crd-ref-docs
