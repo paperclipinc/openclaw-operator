@@ -54,4 +54,3 @@ docs-site/.cache/
 __pycache__/
 *.pyc
 .cache/
-bin/crd-ref-docs

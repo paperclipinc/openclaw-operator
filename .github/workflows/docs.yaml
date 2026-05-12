@@ -67,6 +67,18 @@ jobs:
             "${{ steps.ver.outputs.short }}" latest \
             --title "v${{ steps.ver.outputs.full }}"
 
+      - name: Ensure CNAME file at gh-pages root
+        run: |
+          git fetch origin gh-pages
+          git checkout gh-pages
+          echo "docs-operator.openclaw.rocks" > CNAME
+          if ! git diff --quiet CNAME 2>/dev/null; then
+            git add CNAME
+            git commit -m "chore: ensure CNAME for docs-operator.openclaw.rocks"
+            git push origin gh-pages
+          fi
+          git checkout -
+
       - name: Mike set default
         working-directory: docs-site
         run: mike set-default --push latest

@@ -101,7 +101,6 @@ extra:
   version:
     provider: mike
     default: latest
-  cname: docs-operator.openclaw.rocks
   analytics:
     provider: custom
   analytics_keys:
