@@ -1,0 +1,25 @@
+# OpenClaw Operator
+
+> Kubernetes operator for managing OpenClaw AI agent instances with production-grade security, observability, and lifecycle management.
+
+## Docs
+
+- [API Reference - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/api-reference/)
+- [Architecture - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/architecture/)
+- [Backup and Restore - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/backup-restore/)
+- [Custom AI Providers - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/custom-providers/)
+- [Deployment Guide - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/deployment/)
+- [External Secrets Operator (ESO) Integration - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/external-secrets/)
+- [Full Example - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/full-example/)
+- [OpenClaw Operator - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/)
+- [Model Fallback Chains - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/model-fallback/)
+- [OpenClawClusterDefaults - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/openclaw-cluster-defaults/)
+- [OpenClawSelfConfig - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/openclaw-self-config/)
+- [OpenClawAutoUpdateRollback - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawAutoUpdateRollback/)
+- [OpenClawInstanceDegraded - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawInstanceDegraded/)
+- [OpenClawPVCNearlyFull - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawPVCNearlyFull/)
+- [OpenClawPodCrashLooping - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawPodCrashLooping/)
+- [OpenClawPodOOMKilled - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawPodOOMKilled/)
+- [OpenClawReconcileErrors - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawReconcileErrors/)
+- [OpenClawSlowReconciliation - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawSlowReconciliation/)
+- [Troubleshooting - OpenClaw Operator](https://openclaw.rocks/docs/operator/latest/troubleshooting/)
