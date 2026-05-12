@@ -172,6 +172,24 @@ $(OPERATOR_SDK): $(LOCALBIN)
 	chmod +x $(OPERATOR_SDK); \
 	}
 
+##@ Docs generation
+
+CRD_REF_DOCS ?= $(LOCALBIN)/crd-ref-docs
+CRD_REF_DOCS_VERSION ?= v0.3.0
+
+.PHONY: crd-ref-docs
+crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
+$(CRD_REF_DOCS): $(LOCALBIN)
+	test -s $(LOCALBIN)/crd-ref-docs || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
+
+.PHONY: api-docs
+api-docs: manifests crd-ref-docs ## Regenerate docs/api-reference.md from CRD types.
+	$(CRD_REF_DOCS) \
+	  --config docs-site/crd-ref-docs.yaml \
+	  --source-path api/v1alpha1 \
+	  --output-path docs/api-reference.md \
+	  --renderer markdown
+
 ##@ Docs Site
 
 .PHONY: docs-venv

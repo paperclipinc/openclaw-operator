@@ -1,1216 +1,1244 @@
 # API Reference
 
-## OpenClawInstance (v1alpha1)
+## Packages
+- [openclaw.rocks/v1alpha1](#openclawrocksv1alpha1)
 
-**Group**: `openclaw.rocks`
-**Version**: `v1alpha1`
-**Kind**: `OpenClawInstance`
-**Scope**: Namespaced
 
-An `OpenClawInstance` represents a single deployment of the OpenClaw AI assistant in a Kubernetes cluster. The operator watches these resources and reconciles a full stack of dependent objects (StatefulSet, Service, RBAC, NetworkPolicy, storage, and more).
+## openclaw.rocks/v1alpha1
 
-### Print Columns
+Package v1alpha1 contains API Schema definitions for the openclaw v1alpha1 API group
 
-When listing resources with `kubectl get openclawinstances`, the following columns are displayed:
+### Resource Types
+- [OpenClawClusterDefaults](#openclawclusterdefaults)
+- [OpenClawInstance](#openclawinstance)
+- [OpenClawSelfConfig](#openclawselfconfig)
 
-| Column    | JSON Path                                          |
-|-----------|----------------------------------------------------|
-| Phase     | `.status.phase`                                    |
-| Ready     | `.status.conditions[?(@.type=='Ready')].status`    |
-| Gateway   | `.status.gatewayEndpoint`                          |
-| Age       | `.metadata.creationTimestamp`                      |
 
----
 
-## Spec Fields
+#### AdditionalWorkspace
 
-### spec.registry
 
-Global container image registry override. When set, this registry replaces the registry part of all container images used by the instance (main container, sidecars, init containers).
 
-| Field       | Type       | Default | Description                                                                                       |
-|-------------|------------|---------|---------------------------------------------------------------------------------------------------|
-| `registry`  | `string`   | --      | Global registry hostname/port to use for all images. Example: `my-registry.example.com` or `my-registry:5000`. |
+AdditionalWorkspace defines a named workspace for a secondary agent.
+The operator seeds files to ~/.openclaw/workspace-<name>/.
 
-**Example:**
 
-```yaml
-spec:
-  registry: my-registry.example.com
-```
 
-**Transformation examples:**
+_Appears in:_
+- [WorkspaceSpec](#workspacespec)
 
-| Original image | With `registry: my-registry.example.com` |
-|----------------|-------------------------------------------|
-| `ghcr.io/openclaw/openclaw:latest` | `my-registry.example.com/openclaw/openclaw:latest` |
-| `nginx:1.27-alpine` | `my-registry.example.com/nginx:1.27-alpine` |
-| `ollama/ollama:latest` | `my-registry.example.com/ollama/ollama:latest` |
-| `ghcr.io/openclaw/openclaw@sha256:abc123` | `my-registry.example.com/openclaw/openclaw@sha256:abc123` |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name identifies this workspace. The operator seeds files to<br />~/.openclaw/workspace-<name>/. Must match the workspace path<br />configured in spec.config.raw.agents.list[].workspace. |  | MaxLength: 63 <br />MinLength: 1 <br />Pattern: `^[a-z0-9]+(-[a-z0-9]+)*$` <br /> |
+| `configMapRef` _[ConfigMapNameSelector](#configmapnameselector)_ | ConfigMapRef references an external ConfigMap whose keys become workspace files. |  | Optional: \{\} <br /> |
+| `initialFiles` _object (keys:string, values:string)_ | InitialFiles maps filenames to their content (same as spec.workspace.initialFiles). |  | MaxProperties: 50 <br />Optional: \{\} <br /> |
+| `initialDirectories` _string array_ | InitialDirectories is a list of directories to create inside this workspace. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
 
 
-### spec.image
+#### AutoScalingSpec
 
-Container image configuration for the main OpenClaw workload.
 
-| Field          | Type                         | Default                        | Description                                                       |
-|----------------|------------------------------|--------------------------------|-------------------------------------------------------------------|
-| `repository`   | `string`                     | `ghcr.io/openclaw/openclaw`    | Container image repository.                                       |
-| `tag`          | `string`                     | `latest`                       | Container image tag.                                              |
-| `digest`       | `string`                     | --                             | Image digest (overrides `tag` if set). Format: `sha256:abc...`.   |
-| `pullPolicy`   | `string`                     | `IfNotPresent`                 | Image pull policy. One of: `Always`, `IfNotPresent`, `Never`.     |
-| `pullSecrets`  | `[]LocalObjectReference`     | --                             | List of Secrets for pulling from private registries.              |
 
-### spec.config
+AutoScalingSpec configures horizontal pod auto-scaling via HPA
 
-Configuration for the OpenClaw application (`openclaw.json`).
 
-| Field          | Type                  | Default       | Description                                                                |
-|----------------|-----------------------|---------------|----------------------------------------------------------------------------|
-| `configMapRef` | `ConfigMapKeySelector`| --            | Reference to an external ConfigMap. If set, `raw` is ignored.              |
-| `raw`          | `RawConfig`           | --            | Inline JSON configuration. The operator creates a managed ConfigMap.       |
-| `mergeMode`    | `string`              | `overwrite`   | How config is applied to the PVC. `overwrite` replaces on every restart. `merge` deep-merges with existing PVC config, preserving runtime changes. **Caveat:** in merge mode, removing a key from the CR does not delete it from the PVC - temporarily use `replace` to wipe stale keys. |
-| `format`       | `string`              | `json`        | Config file format. `json` (standard JSON) or `json5` (JSON5 with comments/trailing commas). JSON5 requires `configMapRef` - inline `raw` must be valid JSON. JSON5 is converted to standard JSON by the init container using npx json5. |
 
-**ConfigMapKeySelector:**
+_Appears in:_
+- [AvailabilitySpec](#availabilityspec)
 
-| Field  | Type     | Default          | Description                            |
-|--------|----------|------------------|----------------------------------------|
-| `name` | `string` | (required)       | Name of the ConfigMap.                 |
-| `key`  | `string` | `openclaw.json`  | Key within the ConfigMap to mount.     |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables HorizontalPodAutoscaler creation | false | Optional: \{\} <br /> |
+| `minReplicas` _integer_ | MinReplicas is the lower limit for the number of replicas | 1 | Minimum: 1 <br />Optional: \{\} <br /> |
+| `maxReplicas` _integer_ | MaxReplicas is the upper limit for the number of replicas | 5 | Minimum: 1 <br />Optional: \{\} <br /> |
+| `targetCPUUtilization` _integer_ | TargetCPUUtilization is the target average CPU utilization (percentage) | 80 | Maximum: 100 <br />Minimum: 1 <br />Optional: \{\} <br /> |
+| `targetMemoryUtilization` _integer_ | TargetMemoryUtilization is the target average memory utilization (percentage).<br />When not set, only CPU-based scaling is used. |  | Maximum: 100 <br />Minimum: 1 <br />Optional: \{\} <br /> |
 
-### spec.workspace
 
-Configures initial workspace files seeded into the instance. Files are copied once on first boot and never overwritten, so agent modifications survive pod restarts.
+#### AutoUpdateSpec
 
-| Field                  | Type                      | Default | Description                                                                                       |
-|------------------------|---------------------------|---------|---------------------------------------------------------------------------------------------------|
-| `configMapRef`         | `ConfigMapNameSelector`   | --      | Reference to an external ConfigMap whose keys become workspace files. See sub-fields below. |
-| `initialFiles`         | `map[string]string`       | --      | Maps file paths to their content. Each file is written to the workspace directory only if it does not already exist. Keys may contain `/` for nested paths (e.g. `agents/AGENT.md`); the operator encodes them as ConfigMap-safe keys (`/` → `--`) and the init container recreates the directory layout when seeding. Path safety rules: max 253 chars, no `\`, no `..` segment, no segment starting with `.`, no leading or trailing `/`. `openclaw.json` is reserved at the root. Max 50 entries. |
-| `initialDirectories`   | `[]string`                | --      | Directories to create (`mkdir -p`) inside the workspace directory. Nested paths like `tools/scripts` are allowed. Max 20 items. |
-| `additionalWorkspaces` | `[]AdditionalWorkspace`   | --      | Additional agent workspaces for multi-agent setups. Each entry seeds files to `~/.openclaw/workspace-<name>/`. Max 10 items. See sub-fields below. |
-| `bootstrap`            | `BootstrapSpec`           | --      | Controls operator-managed `BOOTSTRAP.md` injection. See sub-fields below. |
 
-#### spec.workspace.configMapRef
 
-| Field  | Type     | Default | Description                                                      |
-|--------|----------|---------|------------------------------------------------------------------|
-| `name` | `string` | --      | **(Required)** Name of the ConfigMap in the same namespace as the instance. All keys in the ConfigMap are written as files to the workspace directory. |
+AutoUpdateSpec configures automatic version updates from the OCI registry
 
-**Merge priority** (highest wins): operator-injected files > inline `initialFiles` > external `configMapRef` > skill packs.
 
-The controller watches the referenced ConfigMap for changes and re-reconciles automatically. If the ConfigMap is missing or contains invalid filenames, the `WorkspaceReady` status condition is set to `False`.
 
-**How seeding works:** The operator merges all workspace file sources into a single operator-managed ConfigMap, which is mounted read-only on the init container. The init container copies files to the PVC (writable) using seed-once semantics (`[ -f target ] || cp source target`). The main container only mounts the PVC -- ConfigMaps are never mounted directly on the main container, so agents can freely modify their workspace files.
-
-**Seed-once, never overwrite:** Files are only written when they don't already exist on the PVC. If an agent modifies its workspace files at runtime (e.g. updating SOUL.md via the self-improvement skill), those changes persist across pod restarts. Updating the ConfigMap or `initialFiles` only affects new instances or files that have been manually deleted from the PVC.
-
-#### spec.workspace.bootstrap
-
-Controls the operator-managed `BOOTSTRAP.md` file, which is seeded into the default workspace to guide first-run agent onboarding (setting identity, meeting the user, picking a persona). The agent deletes `BOOTSTRAP.md` after applying it.
-
-| Field     | Type   | Default | Description |
-|-----------|--------|---------|-------------|
-| `enabled` | `bool` | `true`  | When `false`, the operator does not inject `BOOTSTRAP.md` into the workspace ConfigMap and the init container skips its seeding step. Set this to `false` after the agent has completed bootstrap so it isn't re-run on every pod restart or config change. |
-
-Because the init container seeds via `[ -f target ] || cp source target`, it always re-copies `BOOTSTRAP.md` once the agent deletes it -- which would force the onboarding flow to run again on every restart. Flipping `enabled` to `false` is the clean opt-out.
-
-```yaml
-spec:
-  workspace:
-    bootstrap:
-      enabled: false
-```
-
-`ENVIRONMENT.md`, self-configure files, and skill-pack files are not affected by this field.
-
-#### spec.workspace.additionalWorkspaces[]
-
-Each entry configures a named workspace for a secondary agent. The operator seeds files to `~/.openclaw/workspace-<name>/`.
-
-| Field              | Type                    | Default | Description                                                                                       |
-|--------------------|-------------------------|---------|---------------------------------------------------------------------------------------------------|
-| `name`             | `string`                | --      | **(Required)** Workspace identifier. Must be a DNS label (`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`), max 63 chars. Seeds to `~/.openclaw/workspace-<name>/`. |
-| `configMapRef`     | `ConfigMapNameSelector` | --      | Reference to an external ConfigMap whose keys become workspace files. |
-| `initialFiles`     | `map[string]string`     | --      | Maps file paths to their content. Same path rules as the default workspace `initialFiles`, including support for nested paths like `agents/AGENT.md`. Max 50 entries. |
-| `initialDirectories` | `[]string`            | --      | Directories to create inside this workspace. Max 20 items. |
-
-Per-workspace merge priority (highest wins): operator-injected `ENVIRONMENT.md` > inline `initialFiles` > external `configMapRef`. Note: `BOOTSTRAP.md`, self-configure files, and skill packs are only injected into the default workspace.
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
 
-The agent workspace path in `spec.config.raw.agents.list[].workspace` must match the convention `~/.openclaw/workspace-<name>` where `<name>` is the `additionalWorkspaces[].name` value.
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables automatic version updates | false | Optional: \{\} <br /> |
+| `checkInterval` _string_ | CheckInterval is how often to check for new versions (Go duration, e.g. "24h")<br />Minimum: 1h, Maximum: 168h (7 days) | 24h | Optional: \{\} <br /> |
+| `backupBeforeUpdate` _boolean_ | BackupBeforeUpdate creates a backup before applying updates | true | Optional: \{\} <br /> |
+| `rollbackOnFailure` _boolean_ | RollbackOnFailure automatically reverts to the previous version if the<br />updated pod fails to become ready within HealthCheckTimeout | true | Optional: \{\} <br /> |
+| `healthCheckTimeout` _string_ | HealthCheckTimeout is how long to wait for the updated pod to become ready<br />before triggering a rollback (Go duration, e.g. "10m")<br />Minimum: 2m, Maximum: 30m | 10m | Optional: \{\} <br /> |
 
-```yaml
-spec:
-  workspace:
-    configMapRef:
-      name: my-workspace-files      # all keys become workspace files
-    initialDirectories:
-      - tools/scripts
-      - data
-    initialFiles:                    # inline files override configMapRef
-      README.md: |
-        # My Workspace
-        This workspace is managed by OpenClaw.
-    additionalWorkspaces:
-      - name: scheduler
-        configMapRef:
-          name: scheduler-workspace
-        initialFiles:
-          SOUL.md: "I am the scheduler"
-  config:
-    raw:
-      agents:
-        list:
-          - id: main
-          - id: scheduler
-            workspace: "~/.openclaw/workspace-scheduler"
-```
 
-**GitOps example with Kustomize:**
+#### AvailabilitySpec
 
-When using Kustomize `configMapGenerator` with `configMapRef`, two settings are required:
 
-```yaml
-# kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
 
-namespace: my-namespace                # ConfigMaps must be in the same namespace as the instance
+AvailabilitySpec defines high availability settings
 
-generatorOptions:
-  disableNameSuffixHash: true          # operator looks up ConfigMaps by exact name
 
-resources:
-  - instance.yaml
 
-configMapGenerator:
-  - name: my-workspace-files           # default agent workspace
-    files:
-      - agents/main/SOUL.md
-      - agents/main/AGENT.md
-  - name: scheduler-workspace          # additional agent workspace
-    files:
-      - agents/scheduler/SOUL.md
-      - agents/scheduler/TOOLS.md
-```
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
 
-- **`disableNameSuffixHash: true`** -- Required. Without this, kustomize appends a content hash to ConfigMap names (e.g. `my-workspace-files-57k7g4dthc`), causing the operator to fail with `ConfigMapNotFound`. The operator handles rollout detection via its own config hash annotation, so the kustomize hash is unnecessary.
-- **`namespace`** -- Required. Generated ConfigMaps must be in the same namespace as the instance. Without this, kustomize creates them in the `default` namespace.
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `podDisruptionBudget` _[PodDisruptionBudgetSpec](#poddisruptionbudgetspec)_ | PodDisruptionBudget configures the PDB |  | Optional: \{\} <br /> |
+| `autoScaling` _[AutoScalingSpec](#autoscalingspec)_ | AutoScaling configures horizontal pod auto-scaling |  | Optional: \{\} <br /> |
+| `nodeSelector` _object (keys:string, values:string)_ | NodeSelector is a selector which must match a node's labels for the pod to be scheduled |  | Optional: \{\} <br /> |
+| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations are tolerations for pod scheduling |  | Optional: \{\} <br /> |
+| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity specifies affinity scheduling rules |  | Optional: \{\} <br /> |
+| `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#topologyspreadconstraint-v1-core) array_ | TopologySpreadConstraints describes how pods should spread across topology domains |  | Optional: \{\} <br /> |
+| `runtimeClassName` _string_ | RuntimeClassName refers to a RuntimeClass object in the cluster,<br />which should be used to run this pod.<br />If no RuntimeClass resource matches the named class, the pod will not be run.<br />If unset or empty, the default container runtime is used.<br />More info: https://kubernetes.io/docs/concepts/containers/runtime-class/ |  | Optional: \{\} <br /> |
 
-### spec.skills
 
-| Field    | Type       | Default | Description                                                                                       |
-|----------|------------|---------|---------------------------------------------------------------------------------------------------|
-| `skills` | `[]string` | --      | Skills to install. Three formats supported: ClawHub identifiers (e.g., `mcp-server-fetch`), npm packages with `npm:` prefix (e.g., `npm:@openclaw/matrix`), and GitHub-hosted skill packs with `pack:` prefix (e.g., `pack:openclaw-rocks/skills/image-gen`). ClawHub installs are idempotent - already-installed skills are skipped gracefully, making restarts safe with persistent storage. npm lifecycle scripts are disabled for security. Max 20 items. SSA list type: `set` -- each skill is individually tracked for field ownership. |
+#### BackupSpec
 
-```yaml
-spec:
-  skills:
-    - "mcp-server-fetch"                                     # ClawHub
-    - "npm:@openclaw/matrix"                                # npm package
-    - "pack:openclaw-rocks/skills/image-gen"                # skill pack (latest)
-    - "pack:openclaw-rocks/skills/image-gen@v1.0.0"         # skill pack (pinned)
-```
 
-**Skill packs** (`pack:owner/repo/path[@ref]`) are resolved from GitHub repos in one of two modes:
-
-- **Manifest mode** -- the pack path contains a `skillpack.json` that declares files to seed into the workspace, directories to create, and config entries to inject into `config.raw.skills.entries`. User-defined config entries take precedence over pack defaults.
-- **Raw-repo mode** -- when no `skillpack.json` is present, the operator falls back to installing the pack path directly. If a `SKILL.md` exists at the path, every file beneath it is seeded into the workspace at `skills/<basename>/<relative-path>` (preserving nested directories). This is intended for community repositories like `fluxcd/agent-skills` that use a conventional layout without manifests. Raw mode does not inject `config.raw.skills.entries`; use manifest mode if you need that. Installation is refused if GitHub truncates the tree response for very large repositories.
 
-The operator caches resolved packs for 5 minutes. Set `GITHUB_TOKEN` on the operator for private repo access and to raise GitHub rate limits.
+BackupSpec configures periodic scheduled backups to S3-compatible storage.
 
-### spec.plugins
 
-| Field     | Type       | Default | Description                                                                                       |
-|-----------|------------|---------|---------------------------------------------------------------------------------------------------|
-| `plugins` | `[]string` | --      | Plugins to install. Entries are npm package names (e.g., `@martian-engineering/lossless-claw`). An optional `npm:` prefix is accepted and stripped before installation. npm lifecycle scripts are disabled for security. Max 20 items. |
 
-```yaml
-spec:
-  plugins:
-    - "@martian-engineering/lossless-claw"
-    - "some-other-plugin"
-```
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
 
-Plugins are installed in a dedicated `init-plugins` init container into `~/.openclaw/extensions/<name>/`, where `<name>` is the unscoped npm package basename (so `@openclaw/brave-plugin` becomes `~/.openclaw/extensions/brave-plugin/`). This is the layout the OpenClaw gateway's plugin discovery walks - subdirectories of `~/.openclaw/extensions/` containing a `package.json`, bundle manifest, or default entry file are auto-loaded, while `node_modules/` is explicitly skipped by the loader.
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `schedule` _string_ | Schedule is a cron expression for periodic backups (e.g., "0 2 * * *" for daily at 2 AM).<br />When set, the operator creates a CronJob that runs rclone to sync PVC data to S3.<br />Requires persistence to be enabled and the s3-backup-credentials Secret<br />in the operator namespace. |  | Optional: \{\} <br /> |
+| `historyLimit` _integer_ | HistoryLimit is the number of successful CronJob runs to retain. | 3 | Minimum: 0 <br />Optional: \{\} <br /> |
+| `failedHistoryLimit` _integer_ | FailedHistoryLimit is the number of failed CronJob runs to retain. | 1 | Minimum: 0 <br />Optional: \{\} <br /> |
+| `timeout` _string_ | Timeout is the maximum duration to wait for a pre-delete backup to complete<br />before giving up and proceeding with deletion (Go duration string, e.g. "30m", "1h").<br />Covers all phases: StatefulSet scale-down, pod termination, Job execution, and<br />Job failure retries. When the timeout elapses the operator logs a warning,<br />emits a BackupTimedOut event, and removes the finalizer so deletion can proceed.<br />Minimum: 5m, Maximum: 24h, Default: 30m. |  | Optional: \{\} <br /> |
+| `serviceAccountName` _string_ | ServiceAccountName is the name of the ServiceAccount to use for backup and restore Jobs.<br />Use this to assign a cloud-provider workload identity ServiceAccount (e.g., AWS IRSA,<br />GKE Workload Identity, AKS Workload Identity) so backup Jobs can authenticate to the<br />storage backend without static credentials.<br />When set, all backup Jobs (pre-delete, pre-update, periodic, and restore) use this SA. |  | Optional: \{\} <br /> |
+| `retentionDays` _integer_ | RetentionDays is the number of days to keep daily snapshots in S3.<br />The periodic backup syncs incrementally to a fixed "latest" path and<br />takes a daily snapshot. Snapshots older than RetentionDays are pruned<br />after each successful backup. | 7 | Maximum: 365 <br />Minimum: 1 <br />Optional: \{\} <br /> |
 
-The init container stages each install via `npm pack` into a tmp dir, runs `npm install --omit=dev` in the extracted package to populate per-plugin runtime deps, and then atomically renames the result into place so a partial/failed install is never visible to the gateway. The PVC backs `~/.openclaw/`, so installs persist across pod restarts.
 
-> Migrating from earlier operator versions (<= 0.31.0): plugins were installed under `~/.openclaw/node_modules/<pkg>/` and were not auto-discovered. Users typically worked around this by adding `plugins.load.paths` entries to their gateway config pointing at the node_modules path. Once upgraded, that workaround can be removed - plugins land in the documented `~/.openclaw/extensions/<name>/` location and the gateway picks them up automatically. The stale node_modules entries are left in place to avoid disturbing other PVC state and are harmless.
+#### BootstrapSpec
 
-### spec.envFrom
 
-| Field     | Type                  | Default | Description                                                                       |
-|-----------|-----------------------|---------|-----------------------------------------------------------------------------------|
-| `envFrom` | `[]EnvFromSource`     | --      | Sources to populate environment variables (e.g., Secrets for `ANTHROPIC_API_KEY`). |
 
-Standard Kubernetes `EnvFromSource`. Commonly used to inject API keys from a Secret:
-
-```yaml
-spec:
-  envFrom:
-    - secretRef:
-        name: openclaw-api-keys
-```
+BootstrapSpec controls the operator-managed BOOTSTRAP.md workspace file.
 
-### spec.env
-
-| Field | Type           | Default | Description                                         |
-|-------|----------------|---------|-----------------------------------------------------|
-| `env` | `[]EnvVar`     | --      | Individual environment variables to set. SSA list type: `map` (key: `name`) -- each env var is individually tracked for field ownership. |
 
-Standard Kubernetes `EnvVar`. Example:
 
-```yaml
-spec:
-  env:
-    - name: LOG_LEVEL
-      value: "debug"
-```
+_Appears in:_
+- [WorkspaceSpec](#workspacespec)
 
-### spec.resources
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled controls whether the operator injects its BOOTSTRAP.md into the<br />default workspace. When true (the default), the init container seeds<br />BOOTSTRAP.md on pod start if the file is not present on the PVC.<br />Set to false if the agent has already completed bootstrap and you don't<br />want the operator to recreate the file on pod restart or config change.<br />OpenClaw deletes BOOTSTRAP.md after applying it, so without this flag<br />every restart would cause the agent to re-run bootstrap. See #463. | true | Optional: \{\} <br /> |
 
-Compute resource requirements for the main OpenClaw container.
 
-| Field                | Type     | Default  | Description                          |
-|----------------------|----------|----------|--------------------------------------|
-| `requests.cpu`       | `string` | `500m`   | Minimum CPU (e.g., `500m`, `2`).     |
-| `requests.memory`    | `string` | `1Gi`    | Minimum memory (e.g., `512Mi`).      |
-| `limits.cpu`         | `string` | `2000m`  | Maximum CPU.                         |
-| `limits.memory`      | `string` | `4Gi`    | Maximum memory.                      |
+#### CABundleSpec
 
-### spec.security
 
-Security-related configuration for the instance.
 
-#### spec.security.podSecurityContext
+CABundleSpec configures custom CA certificate injection.
 
-| Field                 | Type                          | Default          | Description                                                                                |
-|-----------------------|-------------------------------|------------------|--------------------------------------------------------------------------------------------|
-| `runAsUser`           | `*int64`                      | `1000`           | UID to run as. Setting to `0` is rejected by webhook.                                      |
-| `runAsGroup`          | `*int64`                      | `1000`           | GID to run as.                                                                             |
-| `fsGroup`             | `*int64`                      | `1000`           | Supplemental group for volume ownership.                                                   |
-| `fsGroupChangePolicy` | `*PodFSGroupChangePolicy`    | --               | Behavior for changing volume ownership. `OnRootMismatch` skips recursive chown when ownership already matches, improving startup time for large PVCs. `Always` recursively chowns on every mount (Kubernetes default). |
-| `runAsNonRoot`        | `*bool`                       | `true`           | Require non-root execution. Warns if set to `false`.                                       |
 
-#### spec.security.containerSecurityContext
-
-| Field                      | Type              | Default | Description                                                    |
-|----------------------------|-------------------|---------|----------------------------------------------------------------|
-| `allowPrivilegeEscalation` | `*bool`           | `false` | Allow privilege escalation. Warns if set to `true`.            |
-| `readOnlyRootFilesystem`   | `*bool`           | `true`  | Mount root filesystem as read-only. Writable paths: PVC at `~/.openclaw/`, `~/.local/` (pip user installs), `~/.cache/` (package caches), `~/.config/` (CLI config dir, e.g. Codex / ACP runtimes), and `/tmp` emptyDir. |
-| `capabilities`             | `*Capabilities`   | Drop ALL | Linux capabilities to add or drop.                            |
-| `runAsNonRoot`             | `*bool`           | --      | Require non-root execution for the main container. When not set, inherits from `podSecurityContext.runAsNonRoot` (defaults to `true`). Set to `false` to allow the main container to run as root without contradicting the pod-level setting. |
-| `runAsUser`                | `*int64`          | --      | UID to run the main container as. When not set, inherits from `podSecurityContext.runAsUser` via Kubernetes. |
-
-#### spec.security.networkPolicy
-
-| Field                      | Type                              | Default | Description                                                  |
-|----------------------------|-----------------------------------|---------|--------------------------------------------------------------|
-| `enabled`                  | `*bool`                           | `true`  | Create a NetworkPolicy. Warns if disabled.                   |
-| `allowedIngressCIDRs`      | `[]string`                        | --      | CIDRs allowed to reach the instance.                         |
-| `allowedIngressNamespaces` | `[]string`                        | --      | Namespaces allowed to reach the instance.                    |
-| `allowedEgressCIDRs`       | `[]string`                        | --      | CIDRs the instance can reach (in addition to HTTPS/DNS).     |
-| `allowDNS`                 | `*bool`                           | `true`  | Allow DNS resolution (UDP/TCP port 53).                      |
-| `additionalEgress`         | `[]NetworkPolicyEgressRule`       | --      | Custom egress rules appended to the default DNS + HTTPS rules. Use this to allow traffic to cluster-internal services on non-standard ports. |
-
-#### spec.security.rbac
-
-| Field                        | Type                  | Default | Description                                                                              |
-|------------------------------|-----------------------|---------|------------------------------------------------------------------------------------------|
-| `createServiceAccount`       | `*bool`               | `true`  | Create a dedicated ServiceAccount for this instance.                                     |
-| `serviceAccountName`         | `string`              | --      | Use an existing ServiceAccount (only when `createServiceAccount` is `false`).            |
-| `serviceAccountAnnotations`  | `map[string]string`   | --      | Annotations to add to the managed ServiceAccount. Use for cloud provider integrations like AWS IRSA or GCP Workload Identity. |
-| `additionalRules`            | `[]RBACRule`          | --      | Custom RBAC rules appended to the generated Role.                                        |
-
-**RBACRule:**
-
-| Field       | Type       | Description                                    |
-|-------------|------------|------------------------------------------------|
-| `apiGroups` | `[]string` | API groups (e.g., `[""]` for core, `["apps"]`).|
-| `resources` | `[]string` | Resources (e.g., `["pods"]`).                  |
-| `verbs`     | `[]string` | Verbs (e.g., `["get", "list"]`).               |
-
-#### spec.security.caBundle
-
-Injects a custom CA certificate bundle into all containers. Use this in environments with TLS-intercepting proxies or private CAs.
-
-| Field            | Type     | Default         | Description                                                                              |
-|------------------|----------|-----------------|------------------------------------------------------------------------------------------|
-| `configMapName`  | `string` | --              | Name of a ConfigMap containing the CA bundle. The ConfigMap should have a key matching `key`. |
-| `secretName`     | `string` | --              | Name of a Secret containing the CA bundle. Only one of `configMapName` or `secretName` should be set. |
-| `key`            | `string` | `ca-bundle.crt` | Key in the ConfigMap or Secret containing the CA bundle PEM file.                        |
-
-```yaml
-spec:
-  security:
-    caBundle:
-      configMapName: corporate-ca
-      key: ca-bundle.crt
-```
-
-### spec.shareProcessNamespace
-
-| Field                   | Type    | Default | Description                                                                                                                                                                                                                                                                                                                                                                          |
-|-------------------------|---------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `shareProcessNamespace` | `*bool` | `true`  | When `true`, all containers in the pod share a PID namespace. The Kubernetes `pause` container becomes PID 1 and reaps zombie processes, preventing accumulation of defunct helpers (QMD, git, plugins, shells) under a Node.js gateway that does not call `waitpid()`. Set to `false` to keep per-container PID isolation; you are then responsible for reaping zombies in-image. |
-
-**Security implication.** With PID-namespace sharing enabled, every container in the pod can see and signal every other container's processes. A compromised sidecar (Tailscale, Ollama, browser, custom) could send signals to the gateway and vice versa. For most deployments this is an acceptable trade-off for zombie reaping; if your threat model assumes mutually distrusting sidecars, disable this and add a `tini`/`dumb-init` wrapper to your main image instead.
-
-**Upgrade note.** Existing instances created before this field existed will have `nil` in their stored spec. The operator treats `nil` as `true`, so the next reconcile rolls the pod template to enable sharing. Plan a maintenance window if you operate a large fleet.
-
-```yaml
-# Opt out of shared PID namespace
-spec:
-  shareProcessNamespace: false
-```
-
-### spec.storage
-
-Persistent storage configuration.
-
-#### spec.storage.persistence
-
-| Field           | Type                            | Default            | Description                                          |
-|-----------------|---------------------------------|--------------------|------------------------------------------------------|
-| `enabled`       | `*bool`                         | `true`             | Enable persistent storage via PVC.                   |
-| `storageClass`  | `*string`                       | (cluster default)  | StorageClass name. Immutable after creation.         |
-| `size`          | `string`                        | `10Gi`             | PVC size.                                            |
-| `accessModes`   | `[]PersistentVolumeAccessMode`  | `[ReadWriteOnce]`  | PVC access modes.                                    |
-| `existingClaim` | `string`                        | --                 | Name of an existing PVC to use instead of creating one. |
-| `orphan`        | `*bool`                         | `true`             | When `true` (the default), the operator removes the owner reference from the managed PVC before deleting the CR so the PVC is **retained** after deletion. Set to `false` to have the PVC garbage-collected with the CR. Has no effect when `existingClaim` is set (user-managed PVCs are never touched). |
-
-### spec.chromium
-
-Optional Chromium sidecar for browser automation.
-
-| Field                      | Type              | Default                        | Description                                                                                                          |
-|----------------------------|-------------------|--------------------------------|----------------------------------------------------------------------------------------------------------------------|
-| `enabled`                  | `bool`            | `false`                        | Enable the Chromium sidecar container.                                                                               |
-| `image.repository`         | `string`          | `chromedp/headless-shell`         | Chromium container image repository.                                                                                 |
-| `image.tag`                | `string`          | `latest`                       | Chromium image tag.                                                                                                  |
-| `image.digest`             | `string`          | --                             | Chromium image digest for supply chain security.                                                                     |
-| `resources.requests.cpu`   | `string`          | `250m`                         | Chromium minimum CPU.                                                                                                |
-| `resources.requests.memory`| `string`          | `512Mi`                        | Chromium minimum memory.                                                                                             |
-| `resources.limits.cpu`     | `string`          | `1000m`                        | Chromium maximum CPU.                                                                                                |
-| `resources.limits.memory`  | `string`          | `2Gi`                          | Chromium maximum memory.                                                                                             |
-| `persistence.enabled`      | `bool`            | `false`                        | Enable persistent storage for browser profiles. When true, cookies, localStorage, session tokens, and cached credentials survive pod restarts. |
-| `persistence.storageClass` | `*string`         | --                             | StorageClass for the Chromium profile PVC. Uses cluster default if empty.                                            |
-| `persistence.size`         | `string`          | `1Gi`                          | Requested storage size for the Chromium profile PVC.                                                                 |
-| `persistence.existingClaim`| `string`          | --                             | Name of a pre-existing PVC. When set, `storageClass` and `size` are ignored.                                         |
-| `extraArgs`                | `[]string`        | --                             | Additional command-line arguments passed to the Chromium process, appended to the built-in anti-bot defaults (`--disable-blink-features=AutomationControlled`, `--disable-features=AutomationControlled`, `--no-first-run`). |
-| `extraEnv`                 | `[]EnvVar`        | --                             | Additional environment variables for the Chromium sidecar container, merged with operator-managed variables.         |
-
-When enabled, the sidecar:
-
-- Runs Chromium directly with `--remote-debugging-port=9222` (no browserless proxy layer).
-- Exposes Chrome DevTools Protocol on port 9222.
-- Runs as UID 65534 (nobody).
-- Mounts a memory-backed emptyDir at `/dev/shm` (1Gi) for shared memory.
-- Mounts an emptyDir at `/tmp` for scratch space.
-- Anti-bot flags and `extraArgs` are passed directly as container args.
-- When `persistence.enabled` is true, mounts a PVC at `/chromium-data` and passes `--user-data-dir=/chromium-data` to Chrome, persisting cookies, localStorage, IndexedDB, cached credentials, and session tokens across pod restarts.
-
-When Chromium is enabled, the operator also auto-configures browser profiles in the OpenClaw config. Both `"default"` and `"chrome"` profiles are set to point at the sidecar's CDP endpoint via the headless CDP Service DNS name. This ensures browser tool calls work regardless of which profile name the LLM passes.
-
-### spec.tailscale
-
-Optional Tailscale integration for secure tailnet access without Ingress or LoadBalancer. Runs a Tailscale sidecar (`tailscaled`) that handles serve/funnel declaratively.
-
-| Field                | Type                     | Default                            | Description                                                                |
-|----------------------|--------------------------|------------------------------------|----------------------------------------------------------------------------|
-| `enabled`            | `bool`                   | `false`                            | Enable Tailscale integration (adds sidecar + init container).              |
-| `mode`               | `string`                 | `serve`                            | Tailscale mode. `serve` exposes to tailnet members only. `funnel` exposes to the public internet via Tailscale Funnel. |
-| `image.repository`   | `string`                 | `ghcr.io/tailscale/tailscale`      | Tailscale sidecar container image repository.                              |
-| `image.tag`          | `string`                 | `latest`                           | Tailscale sidecar container image tag.                                     |
-| `image.digest`       | `string`                 | --                                 | Container image digest for supply chain security (overrides tag).          |
-| `authKeySecretRef`   | `*LocalObjectReference`  | --                                 | Reference to a Secret containing the Tailscale auth key. Use ephemeral+reusable keys from the Tailscale admin console. |
-| `authKeySecretKey`   | `string`                 | `authkey`                          | Key in the referenced Secret containing the auth key.                      |
-| `hostname`           | `string`                 | (instance name)                    | Tailscale device name. Defaults to the OpenClawInstance name.              |
-| `authSSO`            | `bool`                   | `false`                            | Enable passwordless login for tailnet members. Sets `gateway.auth.allowTailscale=true` in the OpenClaw config. |
-| `resources.requests.cpu` | `string`             | `50m`                              | CPU request for the Tailscale sidecar.                                     |
-| `resources.requests.memory` | `string`          | `64Mi`                             | Memory request for the Tailscale sidecar.                                  |
-| `resources.limits.cpu` | `string`               | `200m`                             | CPU limit for the Tailscale sidecar.                                       |
-| `resources.limits.memory` | `string`            | `256Mi`                            | Memory limit for the Tailscale sidecar.                                    |
-
-When enabled, the operator:
-
-- Adds a **Tailscale sidecar** running `tailscaled` in userspace mode (`TS_USERSPACE=true`). The sidecar handles serve/funnel declaratively via `TS_SERVE_CONFIG`.
-- Adds an **init container** (`init-tailscale-bin`) that copies the `tailscale` CLI binary to a shared volume (`/tailscale-bin`), making it available to the main container for `tailscale whois` (SSO auth).
-- Creates a **state Secret** (`<instance>-ts-state`) and sets `TS_KUBE_SECRET` so Tailscale persists node identity and TLS certificates across pod restarts. This prevents hostname incrementing and Let's Encrypt certificate re-issuance.
-- Grants the pod's ServiceAccount `get/update/patch` on the state Secret and enables `AutomountServiceAccountToken` so containerboot can access the Kubernetes API.
-- Sets `TS_SOCKET` on the main container pointing to the sidecar's Unix socket.
-- Prepends `/tailscale-bin` to the main container's `PATH`.
-- Adds `tailscale-serve.json` to the ConfigMap with the serve/funnel configuration.
-- When `authSSO` is true, sets `gateway.auth.allowTailscale=true` so tailnet members can authenticate without a gateway token.
-- Adds STUN (UDP 3478) and WireGuard (UDP 41641) egress rules to the NetworkPolicy.
-
-### spec.ollama
-
-Optional Ollama sidecar for local LLM inference.
-
-| Field                      | Type     | Default          | Description                                                                |
-|----------------------------|----------|------------------|----------------------------------------------------------------------------|
-| `enabled`                  | `bool`   | `false`          | Enable the Ollama sidecar container.                                       |
-| `image.repository`         | `string` | `ollama/ollama`  | Ollama container image repository.                                         |
-| `image.tag`                | `string` | `latest`         | Ollama image tag.                                                          |
-| `image.digest`             | `string` | --               | Ollama image digest for supply chain security.                             |
-| `models`                   | `[]string` | --             | Models to pre-pull during pod init (e.g., `["llama3.2", "nomic-embed-text"]`). Max 10 items. |
-| `resources.requests.cpu`   | `string` | --               | Ollama minimum CPU.                                                        |
-| `resources.requests.memory`| `string` | --               | Ollama minimum memory.                                                     |
-| `resources.limits.cpu`     | `string` | --               | Ollama maximum CPU.                                                        |
-| `resources.limits.memory`  | `string` | --               | Ollama maximum memory.                                                     |
-| `storage.sizeLimit`        | `string` | `20Gi`           | Size limit for the emptyDir model cache volume.                            |
-| `storage.existingClaim`    | `string` | --               | Name of an existing PVC for persistent model storage (overrides emptyDir). |
-| `gpu`                      | `*int32` | --               | Number of NVIDIA GPUs to allocate (sets `nvidia.com/gpu` resource limit). Minimum: 0. |
-
-When enabled, the operator:
-
-- Adds an Ollama sidecar container to the pod.
-- If `models` are specified, adds an init container (`init-ollama`) that pre-pulls the listed models so they are ready when the pod starts.
-- The model cache uses an emptyDir by default (bounded by `storage.sizeLimit`). Set `storage.existingClaim` to use a PVC for persistent model storage across pod restarts.
-- GPU allocation requires the NVIDIA device plugin to be installed on the cluster.
-
-```yaml
-spec:
-  ollama:
-    enabled: true
-    models:
-      - llama3.2
-      - nomic-embed-text
-    resources:
-      requests:
-        cpu: "2"
-        memory: 4Gi
-      limits:
-        cpu: "8"
-        memory: 16Gi
-    storage:
-      sizeLimit: 40Gi
-    gpu: 1
-```
-
-### spec.webTerminal
-
-Optional ttyd web terminal sidecar for browser-based shell access and debugging.
-
-| Field                      | Type     | Default         | Description                                                                    |
-|----------------------------|----------|-----------------|--------------------------------------------------------------------------------|
-| `enabled`                  | `bool`   | `false`         | Enable the ttyd web terminal sidecar container.                                |
-| `image.repository`         | `string` | `tsl0922/ttyd`  | Web terminal container image repository.                                       |
-| `image.tag`                | `string` | `latest`        | Web terminal image tag.                                                        |
-| `image.digest`             | `string` | --              | Web terminal image digest for supply chain security.                           |
-| `resources.requests.cpu`   | `string` | `50m`           | Web terminal minimum CPU.                                                      |
-| `resources.requests.memory`| `string` | `64Mi`          | Web terminal minimum memory.                                                   |
-| `resources.limits.cpu`     | `string` | `200m`          | Web terminal maximum CPU.                                                      |
-| `resources.limits.memory`  | `string` | `128Mi`         | Web terminal maximum memory.                                                   |
-| `readOnly`                 | `bool`   | `false`         | Start ttyd in read-only mode (view-only, no input). Data volume mount is also set to read-only. |
-| `credential.secretRef.name`| `string` | --              | Name of a Secret with `username` and `password` keys for basic auth.           |
-
-When enabled, the operator:
-
-- Adds a ttyd sidecar container on port 7681 to the pod.
-- Mounts the instance data volume at `/home/openclaw/.openclaw` for inspection.
-- Adds a `/tmp` emptyDir volume for the web terminal container.
-- Adds the web terminal port to the Service and NetworkPolicy.
-- Runs as UID 1000 (same as the main container) for shared file permissions on the data volume.
-
-```yaml
-spec:
-  webTerminal:
-    enabled: true
-    readOnly: true
-    credential:
-      secretRef:
-        name: terminal-credentials
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "128Mi"
-```
-
-### spec.initContainers
-
-| Field            | Type            | Default | Description                                                              |
-|------------------|-----------------|---------|--------------------------------------------------------------------------|
-| `initContainers` | `[]Container`   | --      | Additional init containers to run before the main container. They run after the operator-managed init containers. Max 10 items. |
-
-Standard Kubernetes `Container` spec. The following names are reserved by the operator and rejected by the webhook: `init-config`, `init-pnpm`, `init-python`, `init-skills`, `init-plugins`, `init-ollama`, `init-plugin-runtime-deps`.
-
-```yaml
-spec:
-  initContainers:
-    - name: wait-for-db
-      image: busybox:1.37
-      command: ["sh", "-c", "until nc -z postgres.db.svc 5432; do sleep 2; done"]
-    - name: seed-data
-      image: my-seeder:latest
-      volumeMounts:
-        - name: data
-          mountPath: /data
-```
-
-### spec.sidecars
-
-| Field      | Type            | Default | Description                                                                                       |
-|------------|-----------------|---------|---------------------------------------------------------------------------------------------------|
-| `sidecars` | `[]Container`   | --      | Additional sidecar containers to inject into the pod. Use for custom sidecars like database proxies, log forwarders, or service meshes. |
-
-Standard Kubernetes `Container` spec. Sidecar containers run alongside the main OpenClaw container. If your sidecar replaces the built-in gateway proxy, set `spec.gateway.enabled: false` to avoid running both.
-
-```yaml
-spec:
-  sidecars:
-    - name: cloud-sql-proxy
-      image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.8.0
-      args: ["--structured-logs", "my-project:us-central1:my-db"]
-      resources:
-        requests:
-          cpu: 100m
-          memory: 128Mi
-```
-
-### spec.sidecarVolumes
-
-| Field            | Type         | Default | Description                                                                |
-|------------------|--------------|---------|----------------------------------------------------------------------------|
-| `sidecarVolumes` | `[]Volume`   | --      | Additional volumes to make available to sidecar containers.                |
-
-Standard Kubernetes `Volume` spec. Use this to mount ConfigMaps, Secrets, or other volumes that your custom sidecars need.
-
-```yaml
-spec:
-  sidecarVolumes:
-    - name: proxy-config
-      configMap:
-        name: cloud-sql-proxy-config
-```
-
-### spec.extraVolumes
-
-| Field          | Type         | Default | Description                                                                       |
-|----------------|--------------|---------|-----------------------------------------------------------------------------------|
-| `extraVolumes` | `[]Volume`   | --      | Additional volumes to add to the pod. These volumes are available to the main container via `extraVolumeMounts`. Max 10 items. |
-
-Standard Kubernetes `Volume` spec.
-
-### spec.extraVolumeMounts
-
-| Field               | Type              | Default | Description                                                                                       |
-|---------------------|-------------------|---------|---------------------------------------------------------------------------------------------------|
-| `extraVolumeMounts` | `[]VolumeMount`   | --      | Additional volume mounts to add to the main container. Use with `extraVolumes` to mount ConfigMaps, Secrets, NFS shares, or CSI volumes. Max 10 items. |
-
-Standard Kubernetes `VolumeMount` spec.
-
-```yaml
-spec:
-  extraVolumes:
-    - name: shared-data
-      nfs:
-        server: nfs.example.com
-        path: /exports/data
-    - name: custom-certs
-      secret:
-        secretName: my-tls-certs
-  extraVolumeMounts:
-    - name: shared-data
-      mountPath: /mnt/shared
-      readOnly: true
-    - name: custom-certs
-      mountPath: /etc/custom-certs
-      readOnly: true
-```
-
-### spec.networking
-
-Network-related configuration for the instance.
-
-#### spec.networking.service
-
-| Field         | Type                  | Default      | Description                                               |
-|---------------|-----------------------|--------------|-----------------------------------------------------------|
-| `type`        | `string`              | `ClusterIP`  | Service type. One of: `ClusterIP`, `LoadBalancer`, `NodePort`. |
-| `annotations` | `map[string]string`   | --           | Annotations to add to the Service.                        |
-| `ports`       | `[]ServicePortSpec`   | --           | Custom ports exposed on the Service. When set, replaces the default gateway and canvas ports. |
-
-**ServicePortSpec:**
-
-| Field        | Type     | Default | Description                                        |
-|--------------|----------|---------|----------------------------------------------------|
-| `name`       | `string` | --      | Name of the port (required).                       |
-| `port`       | `int32`  | --      | Port number exposed on the Service (required, 1-65535). |
-| `targetPort` | `*int32` | `port`  | Port on the container to route to (defaults to `port`). |
-| `protocol`   | `string` | `TCP`   | Protocol for the port. One of: `TCP`, `UDP`, `SCTP`. |
-
-When `ports` is not set, the Service exposes these default ports:
-
-| Port Name   | Port   | Target Port | Description                     |
-|-------------|--------|-------------|---------------------------------|
-| `gateway`   | 18789  | 18790       | OpenClaw WebSocket gateway (via nginx proxy sidecar). |
-| `canvas`    | 18793  | 18794       | OpenClaw Canvas HTTP server (via nginx proxy sidecar). |
-| `chromium`  | 9222   | 9222        | Chrome DevTools Protocol via nginx CDP proxy (only if Chromium sidecar is enabled). Browserless listens internally on port 9224. |
-
-The gateway and canvas ports route through an nginx reverse proxy sidecar because the gateway process binds to loopback (`127.0.0.1`). The proxy listens on dedicated ports (`0.0.0.0`) and forwards traffic to loopback. This avoids CWE-319 plaintext WebSocket security errors on non-loopback addresses.
-
-**Note:** Custom ports fully replace the defaults, including the Chromium port. If you use custom ports and have the Chromium sidecar enabled, include the Chromium port (9222) explicitly.
-
-**Custom ports example:**
-
-```yaml
-networking:
-  service:
-    type: ClusterIP
-    ports:
-      - name: http
-        port: 3978
-        targetPort: 3978
-```
-
-#### spec.networking.ingress
-
-| Field         | Type                | Default | Description                                         |
-|---------------|---------------------|---------|-----------------------------------------------------|
-| `enabled`     | `bool`              | `false` | Create an Ingress resource.                         |
-| `className`   | `*string`           | --      | IngressClass to use (e.g., `nginx`, `traefik`).     |
-| `annotations` | `map[string]string` | --      | Custom annotations added to the Ingress.            |
-| `hosts`       | `[]IngressHost`     | --      | List of hosts to route traffic for.                 |
-| `tls`         | `[]IngressTLS`      | --      | TLS termination configuration. Warns if empty.      |
-| `security`    | `IngressSecuritySpec`| --     | Ingress security settings (HTTPS redirect, HSTS, rate limiting). |
-
-**IngressHost:**
-
-| Field   | Type            | Description                                 |
-|---------|-----------------|---------------------------------------------|
-| `host`  | `string`        | Fully qualified domain name.                |
-| `paths` | `[]IngressPath` | Paths to route. Defaults to `[{path: "/"}]`.|
-
-**IngressPath:**
-
-| Field      | Type     | Default    | Description                                                              |
-|------------|----------|------------|--------------------------------------------------------------------------|
-| `path`     | `string` | `/`        | URL path.                                                                |
-| `pathType` | `string` | `Prefix`   | Path matching. One of: `Prefix`, `Exact`, `ImplementationSpecific`.      |
-| `port`     | `*int32` | `18789`    | Backend service port number. Defaults to the gateway port when not set.  |
-
-**Custom backend port example:**
-
-```yaml
-networking:
-  ingress:
-    enabled: true
-    className: nginx
-    hosts:
-      - host: aibot.example.com
-        paths:
-          - path: /api/messages
-            pathType: Prefix
-            port: 3978
-    tls:
-      - hosts:
-          - aibot.example.com
-        secretName: certificate-aibot-tls
-```
-
-**IngressTLS:**
-
-| Field        | Type       | Description                                         |
-|--------------|------------|-----------------------------------------------------|
-| `hosts`      | `[]string` | Hostnames covered by the TLS certificate.           |
-| `secretName` | `string`   | Secret containing the TLS key pair.                 |
-
-**IngressSecuritySpec:**
-
-| Field                            | Type                      | Default | Description                                    |
-|----------------------------------|---------------------------|---------|------------------------------------------------|
-| `forceHTTPS`                     | `*bool`                   | `true`  | Redirect HTTP to HTTPS.                        |
-| `enableHSTS`                     | `*bool`                   | `true`  | Add HSTS headers.                              |
-| `rateLimiting.enabled`           | `*bool`                   | `true`  | Enable rate limiting.                          |
-| `rateLimiting.requestsPerSecond` | `*int32`                  | `10`    | Maximum requests per second.                   |
-| `basicAuth`                      | `*IngressBasicAuthSpec`   | --      | Optional HTTP Basic Authentication. See below. |
-
-**IngressBasicAuthSpec:**
-
-| Field            | Type     | Default     | Description                                                                                       |
-|------------------|----------|-------------|---------------------------------------------------------------------------------------------------|
-| `enabled`        | `*bool`  | `false`     | Enable HTTP Basic Authentication on the Ingress.                                                  |
-| `existingSecret` | `string` | --          | Name of an existing Secret containing htpasswd content in a key named `auth`. When set, no new Secret is generated. |
-| `username`       | `string` | `openclaw`  | Username for the auto-generated htpasswd Secret. Ignored when `existingSecret` is set.            |
-| `realm`          | `string` | `OpenClaw`  | Authentication realm shown in browser prompts.                                                    |
-
-When `enabled: true` and no `existingSecret` is provided, the operator:
-- Generates a random 40-hex-character password
-- Creates a `<name>-basic-auth` Secret with three keys:
-  - `auth` - htpasswd-formatted line (used by ingress controllers)
-  - `username` - plaintext username
-  - `password` - plaintext password
-- Tracks the secret name in `status.managedResources.basicAuthSecret`
-
-**nginx-ingress:** The `auth-type`, `auth-secret`, and `auth-realm` annotations are set automatically.
-
-**Traefik:** A `traefik.io/v1alpha1/Middleware` resource named `<name>-basic-auth` is created in the same namespace (requires Traefik CRDs to be installed), and the `traefik.ingress.kubernetes.io/router.middlewares` annotation is set to reference it.
-
-**Retrieve the auto-generated credentials:**
-
-```bash
-kubectl get secret my-agent-basic-auth -o jsonpath='{.data.username}' | base64 -d
-kubectl get secret my-agent-basic-auth -o jsonpath='{.data.password}' | base64 -d
-```
-
-To rotate credentials, delete the Secret and the operator will generate a new one on next reconcile.
-
-The operator automatically adds WebSocket-related annotations for nginx-ingress (proxy timeouts, HTTP/1.1 upgrade).
-
-### spec.probes
-
-Health probe configuration for the main OpenClaw container. All probes use HTTP GET requests through the nginx proxy sidecar on port 18790 - liveness and startup probes check `/healthz`, while readiness probes check `/readyz`.
-
-#### spec.probes.liveness
-
-| Field                 | Type     | Default | Description                                           |
-|-----------------------|----------|---------|-------------------------------------------------------|
-| `enabled`             | `*bool`  | `true`  | Enable the liveness probe.                            |
-| `initialDelaySeconds` | `*int32` | `30`    | Seconds to wait before the first check.               |
-| `periodSeconds`       | `*int32` | `10`    | Seconds between checks.                              |
-| `timeoutSeconds`      | `*int32` | `5`     | Seconds before the check times out.                  |
-| `failureThreshold`    | `*int32` | `3`     | Consecutive failures before restarting the container. |
-
-#### spec.probes.readiness
-
-| Field                 | Type     | Default | Description                                           |
-|-----------------------|----------|---------|-------------------------------------------------------|
-| `enabled`             | `*bool`  | `true`  | Enable the readiness probe.                           |
-| `initialDelaySeconds` | `*int32` | `5`     | Seconds to wait before the first check.               |
-| `periodSeconds`       | `*int32` | `5`     | Seconds between checks.                              |
-| `timeoutSeconds`      | `*int32` | `3`     | Seconds before the check times out.                  |
-| `failureThreshold`    | `*int32` | `3`     | Consecutive failures before removing from endpoints. |
-
-#### spec.probes.startup
-
-| Field                 | Type     | Default | Description                                           |
-|-----------------------|----------|---------|-------------------------------------------------------|
-| `enabled`             | `*bool`  | `true`  | Enable the startup probe.                             |
-| `initialDelaySeconds` | `*int32` | `5`     | Seconds to wait before the first check.               |
-| `periodSeconds`       | `*int32` | `5`     | Seconds between checks.                              |
-| `timeoutSeconds`      | `*int32` | `3`     | Seconds before the check times out.                  |
-| `failureThreshold`    | `*int32` | `60`    | Consecutive failures before killing the container. Allows up to 300s startup. |
-
-### spec.observability
-
-Metrics and logging configuration.
-
-#### spec.observability.metrics
-
-| Field                       | Type                | Default | Description                                   |
-|-----------------------------|---------------------|---------|-----------------------------------------------|
-| `enabled`                   | `*bool`             | `true`  | Enable the metrics pipeline. When enabled, the operator injects `diagnostics.otel` config into OpenClaw to push OTLP metrics, adds an OTel Collector sidecar that exposes a Prometheus scrape endpoint, and creates the Service port and NetworkPolicy ingress rule. |
-| `port`                      | `*int32`            | `9090`  | Prometheus metrics port exposed by the OTel Collector sidecar. Used for the Service port and ServiceMonitor target. |
-| `serviceMonitor.enabled`    | `*bool`             | `false` | Create a Prometheus `ServiceMonitor`.         |
-| `serviceMonitor.interval`   | `string`            | `30s`   | Prometheus scrape interval.                   |
-| `serviceMonitor.labels`     | `map[string]string` | --      | Labels to add to the ServiceMonitor (for Prometheus selector matching). |
-| `prometheusRule.enabled`    | `*bool`             | `false` | Create a `PrometheusRule` with operator alerts. |
-| `prometheusRule.labels`     | `map[string]string` | --      | Labels to add to the PrometheusRule (for Prometheus rule selector matching). |
-| `prometheusRule.runbookBaseURL` | `string`         | `https://openclaw.rocks/docs/runbooks` | Base URL for alert runbook links. |
-| `grafanaDashboard.enabled`  | `*bool`             | `false` | Create Grafana dashboard ConfigMaps (operator overview + instance detail). |
-| `grafanaDashboard.labels`   | `map[string]string` | --      | Extra labels to add to dashboard ConfigMaps. |
-| `grafanaDashboard.folder`   | `string`            | `OpenClaw` | Grafana folder for the dashboards. |
-
-#### spec.observability.logging
-
-| Field    | Type     | Default | Description                                              |
-|----------|----------|---------|----------------------------------------------------------|
-| `level`  | `string` | `info`  | Log level. One of: `debug`, `info`, `warn`, `error`.     |
-| `format` | `string` | `json`  | Log format. One of: `json`, `text`.                      |
-
-### spec.selfConfigure
-
-Agent self-modification configuration. When enabled, the agent can create `OpenClawSelfConfig` resources to modify its own instance spec via the K8s API.
-
-| Field            | Type                 | Default | Description                                                                     |
-|------------------|----------------------|---------|---------------------------------------------------------------------------------|
-| `enabled`        | `bool`               | `false` | Enable self-configuration for this instance.                                    |
-| `allowedActions` | `[]SelfConfigAction` | --      | Action categories the agent is allowed to perform. If empty, no actions pass validation (fail-safe). Max 4 items. |
-
-**SelfConfigAction values:**
-
-| Value            | Description                                                       |
-|------------------|-------------------------------------------------------------------|
-| `skills`         | Add or remove skills (`spec.skills`).                             |
-| `config`         | Deep-merge patches into the OpenClaw config (`spec.config.raw`).  |
-| `workspaceFiles` | Add or remove initial workspace files (`spec.workspace.initialFiles`). |
-| `envVars`        | Add or remove plain environment variables (`spec.env`).           |
-
-When enabled, the operator:
-- Grants the SA read access to its own `OpenClawInstance` and referenced Secrets (scoped by `resourceNames`)
-- Grants `create`, `get`, `list` on `openclawselfconfigs`
-- Sets `automountServiceAccountToken: true` on the SA and pod spec
-- Injects `OPENCLAW_INSTANCE_NAME` and `OPENCLAW_NAMESPACE` environment variables
-- Adds port 6443 egress to the NetworkPolicy for K8s API access
-- Injects `SELFCONFIG.md` (skill documentation) and `selfconfig.sh` (helper script) into the workspace
-
-### spec.suspended
-
-Scales the workload to zero replicas when `true`. Non-runtime resources (Service, ConfigMap, RBAC, NetworkPolicy, PVC) remain fully managed. Set to `false` to resume normal operation.
-
-| Field       | Type   | Default | Description                                                                  |
-|-------------|--------|---------|------------------------------------------------------------------------------|
-| `suspended` | `bool` | `false` | Scale workload to zero replicas when `true`. Mutually exclusive with `spec.availability.autoScaling.enabled`. |
-
-When suspended:
-- StatefulSet replicas are set to 0
-- `status.phase` becomes `Suspended`
-- `Ready` condition is `False` with reason `Suspended`
-- `StatefulSetReady` condition is `True` once all pods terminate (desired state achieved)
-- Auto-updates are paused and resume when unsuspended
-
-### spec.availability
-
-High availability and scheduling configuration.
-
-| Field                             | Type                | Default | Description                                              |
-|-----------------------------------|---------------------|---------|----------------------------------------------------------|
-| `podDisruptionBudget.enabled`     | `*bool`             | `true`  | Create a PodDisruptionBudget.                            |
-| `podDisruptionBudget.maxUnavailable` | `*int32`         | `1`     | Maximum pods that can be unavailable during disruption.  |
-| `nodeSelector`                    | `map[string]string` | --      | Node labels for pod scheduling.                          |
-| `tolerations`                     | `[]Toleration`      | --      | Tolerations for pod scheduling.                          |
-| `affinity`                        | `*Affinity`         | --      | Affinity and anti-affinity rules.                        |
-| `topologySpreadConstraints`       | `[]TopologySpreadConstraint` | --      | Topology spread constraints for pod scheduling.          |
-| `runtimeClassName`                | `*string`           | --      | RuntimeClass to use for the pod. Selects an alternative container runtime (e.g. Kata Containers, gVisor). If unset, the cluster default runtime is used. See [RuntimeClass docs](https://kubernetes.io/docs/concepts/containers/runtime-class/). |
-| `podAnnotations`                  | `map[string]string` | --      | Extra annotations merged into the StatefulSet pod template. Operator-managed keys (`openclaw.rocks/config-hash`, `openclaw.rocks/secret-hash`) always take precedence. |
-| `autoScaling.enabled`             | `*bool`             | `false` | Create a HorizontalPodAutoscaler.                        |
-| `autoScaling.minReplicas`         | `*int32`            | `1`     | Minimum number of replicas.                              |
-| `autoScaling.maxReplicas`         | `*int32`            | `5`     | Maximum number of replicas.                              |
-| `autoScaling.targetCPUUtilization` | `*int32`           | `80`    | Target average CPU utilization (percentage).             |
-| `autoScaling.targetMemoryUtilization` | `*int32`        | --      | Target average memory utilization (percentage).          |
-
-When `autoScaling.enabled` is `true` with persistence enabled, the operator uses StatefulSet `VolumeClaimTemplates` instead of a standalone PVC. Each replica gets its own PVC (`data-<instance>-<ordinal>`) using `size`, `storageClass`, and `accessModes` from `spec.storage.persistence`. The `existingClaim` field is ignored in this mode. PVC retention policy is `Retain` for both scale-down and deletion.
-
-### spec.backup
-
-Configures periodic scheduled backups to S3-compatible storage. Requires the `s3-backup-credentials` Secret in the operator namespace and persistence to be enabled.
-
-| Field                | Type     | Default | Description                                                                                       |
-|----------------------|----------|---------|---------------------------------------------------------------------------------------------------|
-| `schedule`           | `string` | --      | Cron expression for periodic backups (e.g., `"0 2 * * *"` for daily at 2 AM). When set, the operator creates a CronJob that runs rclone to sync PVC data to S3. |
-| `historyLimit`       | `*int32` | `3`     | Number of successful CronJob runs to retain.                                                       |
-| `failedHistoryLimit` | `*int32` | `1`     | Number of failed CronJob runs to retain.                                                           |
-| `timeout`            | `string` | `30m`   | Maximum duration to wait for a pre-delete backup to complete before giving up and proceeding with deletion (Go duration string, e.g. `"30m"`, `"1h"`). Covers all phases: StatefulSet scale-down, pod termination, Job execution, and Job failure retries. Minimum: `5m`, Maximum: `24h`. |
-| `serviceAccountName` | `string` | --      | ServiceAccount to use for backup and restore Jobs. Set this to an IRSA-annotated or Pod Identity-enabled ServiceAccount so Jobs authenticate via the AWS credential chain instead of static credentials. Applies to all backup Jobs (pre-delete, pre-update, periodic, and restore). |
-| `retentionDays`      | `*int32` | `7`     | Number of days to keep daily snapshots in S3. Snapshots older than this are pruned after each successful backup. Minimum: `1`, Maximum: `365`. |
-
-The CronJob mounts the PVC (hot backup - no downtime) and uses pod affinity to schedule on the same node as the StatefulSet pod (required for RWO PVCs).
-
-Periodic backups use an incremental sync strategy to minimize S3 transactions and storage costs:
-
-1. **Incremental sync** to a fixed `latest` path - only uploads changed files
-2. **Daily snapshot** - copies `latest` to `snapshots/YYYY-MM-DD` (near-free if today's snapshot already exists)
-3. **Retention cleanup** - prunes snapshots older than `retentionDays`
-
-S3 path structure:
-```
-backups/<tenantId>/<instanceName>/periodic/latest/              # incrementally synced
-backups/<tenantId>/<instanceName>/periodic/snapshots/2026-03-13/ # daily snapshot (auto-pruned)
-```
-
-```yaml
-spec:
-  backup:
-    schedule: "0 2 * * *"   # Daily at 2 AM UTC
-    retentionDays: 7         # Keep 7 days of daily snapshots (default)
-    historyLimit: 5          # Keep last 5 successful runs
-    failedHistoryLimit: 2    # Keep last 2 failed runs
-    timeout: "30m"           # Max time for pre-delete backup (default: 30m)
-    serviceAccountName: "my-irsa-sa"  # Optional: use IRSA/Pod Identity for S3 auth
-```
-
-### spec.restoreFrom
-
-| Field         | Type     | Default | Description                                                                                       |
-|---------------|----------|---------|---------------------------------------------------------------------------------------------------|
-| `restoreFrom` | `string` | --      | S3 path to restore data from (e.g., `backups/{tenantId}/{instanceId}/{timestamp}`). When set, the operator restores PVC data from this path before creating the StatefulSet. Works on both existing and new instances (enabling clone/migrate workflows). Cleared automatically after successful restore. Requires the `s3-backup-credentials` Secret to be present in the operator namespace. |
-
-See the [Backup and Restore guide](backup-restore.md) for full setup instructions including clone and migrate workflows.
-
-### spec.runtimeDeps
-
-Configures built-in init containers that install runtime dependencies to the data PVC for use by MCP servers and skills.
-
-| Field    | Type   | Default | Description                                                                              |
-|----------|--------|---------|------------------------------------------------------------------------------------------|
-| `pnpm`   | `bool` | `false` | Install pnpm via corepack for npm-based MCP servers and skills. Adds the `init-pnpm` init container. |
-| `python` | `bool` | `false` | Install Python 3.12 and uv for Python-based MCP servers and skills. Adds the `init-python` init container. |
-
-```yaml
-spec:
-  runtimeDeps:
-    pnpm: true
-    python: true
-```
-
-### spec.gateway
-
-Configures the gateway reverse proxy, authentication token, and Control UI origins.
-
-| Field              | Type       | Default | Description                                                                                       |
-|--------------------|------------|---------|---------------------------------------------------------------------------------------------------|
-| `enabled`          | `*bool`    | `true`  | Enable the gateway reverse proxy (nginx) sidecar. When disabled, the gateway binds to `0.0.0.0` and probes/Service target it directly. **Do not** manually set `gateway.bind: loopback` in your config when the proxy is disabled - the pod will be unreachable. The operator emits a `GatewayBindConflict` warning event if this is detected. When disabled, the gateway serves plaintext `ws://` on `0.0.0.0` - ensure your replacement proxy or Ingress handles TLS termination (CWE-319). |
-| `existingSecret`   | `string`   | --      | Name of a user-managed Secret containing the gateway token. The Secret must have a key named `token`. When set, the operator skips auto-generating a gateway token Secret and uses this Secret instead. |
-| `controlUiOrigins` | `[]string` | --      | Additional allowed origins for the Control UI. The operator always auto-injects `http://localhost:18789` and `http://127.0.0.1:18789` (for port-forwarding) and derives origins from ingress hosts. Use this field to add extra origins (e.g., custom reverse proxy URLs). Max 20 items. |
-
-When `existingSecret` is not set, the operator automatically generates a random gateway token Secret, which is tracked in `status.managedResources.gatewayTokenSecret`.
-
-**Auto-injected settings:**
-
-The operator always injects `gateway.controlUi.dangerouslyDisableDeviceAuth: true` into the config JSON. Device pairing (introduced in OpenClaw v2026.3.2) is fundamentally incompatible with Kubernetes because users cannot approve pairing from inside a container, connections always come through the nginx proxy sidecar (non-local), and mDNS is unavailable. If you explicitly set `gateway.controlUi.dangerouslyDisableDeviceAuth` in your config, your value takes precedence. **Do not set `gateway.mode: local`** - this desktop-only mode enforces device identity checks that cannot work behind a reverse proxy.
-
-The operator also injects the `OPENCLAW_GATEWAY_HANDSHAKE_TIMEOUT_MS=10000` environment variable (10 seconds). OpenClaw v2026.3.12 reduced the WebSocket handshake timeout from ~10s to 3s, which is too short for Kubernetes where plugin loading adds startup overhead. See [upstream issue #46892](https://github.com/openclaw/openclaw/issues/46892). If you set `OPENCLAW_GATEWAY_HANDSHAKE_TIMEOUT_MS` in `spec.env`, your value takes precedence.
-
-When accessing the Control UI through an Ingress, authenticate by appending the gateway token to the URL fragment: `https://openclaw.example.com/#token=<your-token>`.
-
-The operator auto-injects `gateway.controlUi.allowedOrigins` into the config JSON with:
-- **Localhost** (always): `http://localhost:18789`, `http://127.0.0.1:18789`
-- **Ingress hosts**: `https://` if the host appears in TLS config, `http://` otherwise
-- **Explicit extras**: values from `spec.gateway.controlUiOrigins`
-
-If you set `gateway.controlUi.allowedOrigins` directly in your config JSON, the operator will not override it.
-
-**Note:** Since OpenClaw v2026.2.24, `gateway.allowedOrigins` defaults to same-origin only. If you access the Control UI through an Ingress or other non-default hostname, set `gateway.allowedOrigins: ["*"]` in your config to avoid blocked WebSocket connections.
-
-```yaml
-spec:
-  gateway:
-    existingSecret: my-gateway-token
-    controlUiOrigins:
-      - "https://proxy.example.com"
-```
-
-### spec.autoUpdate
-
-Configures automatic version updates from the OCI registry.
-
-| Field                | Type     | Default | Description                                                                                       |
-|----------------------|----------|---------|---------------------------------------------------------------------------------------------------|
-| `enabled`            | `*bool`  | `false` | Enable automatic version updates.                                                                 |
-| `checkInterval`      | `string` | `24h`   | How often to check for new versions (Go duration). Minimum: `1h`, Maximum: `168h` (7 days).       |
-| `backupBeforeUpdate` | `*bool`  | `true`  | Create a backup before applying updates.                                                          |
-| `rollbackOnFailure`  | `*bool`  | `true`  | Automatically revert to the previous version if the updated pod fails to become ready within `healthCheckTimeout`. |
-| `healthCheckTimeout` | `string` | `10m`   | How long to wait for the updated pod to become ready before triggering a rollback (Go duration). Minimum: `2m`, Maximum: `30m`. |
-
-When enabled, the operator periodically checks the OCI registry for newer image tags. If a new version is found, it optionally creates a backup, updates the StatefulSet image tag, and monitors the rollout. If the pod fails to become ready within the health check timeout, the operator automatically rolls back to the previous version (if `rollbackOnFailure` is enabled).
-
-Auto-update pauses after 3 consecutive rollbacks. It resumes when a newer version becomes available.
-
-```yaml
-spec:
-  autoUpdate:
-    enabled: true
-    checkInterval: 12h
-    backupBeforeUpdate: true
-    rollbackOnFailure: true
-    healthCheckTimeout: 15m
-```
-
----
-
-## Status Fields
-
-### status.phase
-
-| Field   | Type     | Description                                                                    |
-|---------|----------|--------------------------------------------------------------------------------|
-| `phase` | `string` | Current lifecycle phase: `Pending`, `Provisioning`, `Running`, `Degraded`, `Failed`, `Terminating`, `BackingUp`, `Restoring`, `Updating`. |
-
-### status.conditions
-
-Standard `metav1.Condition` array. Condition types:
-
-| Type                  | Description                                                    |
-|-----------------------|----------------------------------------------------------------|
-| `Ready`               | Overall readiness of the instance.                             |
-| `ConfigValid`         | Configuration is valid and loaded.                             |
-| `StatefulSetReady`    | StatefulSet has ready replicas.                                |
-| `DeploymentReady`     | **(Deprecated)** Legacy Deployment has ready replicas. Used during migration from Deployment to StatefulSet. |
-| `ServiceReady`        | Service has been created.                                      |
-| `NetworkPolicyReady`  | NetworkPolicy has been applied.                                |
-| `RBACReady`           | RBAC resources are in place.                                   |
-| `StorageReady`        | PVC has been provisioned and is bound.                         |
-| `BackupComplete`      | The backup job completed successfully.                         |
-| `RestoreComplete`     | The restore job completed successfully.                        |
-| `ScheduledBackupReady`| The periodic backup CronJob is configured and ready.           |
-| `AutoUpdateAvailable` | A newer version is available in the OCI registry.              |
-| `SecretsReady`        | All referenced Secrets exist and are accessible.               |
-| `SkillPacksReady`     | Skill packs resolved successfully from GitHub (either via `skillpack.json` or raw-repo autodiscovery). `False` with reason `ResolutionFailed` when GitHub is unreachable, the pack path has no `skillpack.json` and no `SKILL.md`, or the repository tree is truncated - instance runs without skill packs (phase `Degraded`). Retried on next reconcile. |
-| `WorkspaceReady`      | Workspace files seeded successfully. `False` when an external ConfigMap referenced by `spec.workspace.configMapRef` is missing or contains invalid filenames. `True` once all workspace files (from configMapRef, initialFiles, and skill packs) are seeded. |
-
-### status.endpoints
-
-| Field              | Type     | Description                                                  |
-|--------------------|----------|--------------------------------------------------------------|
-| `gatewayEndpoint`  | `string` | In-cluster endpoint for the gateway: `<name>.<ns>.svc:18789`.|
-| `canvasEndpoint`   | `string` | In-cluster endpoint for canvas: `<name>.<ns>.svc:18793`.     |
-
-### status.observedGeneration
-
-| Field                | Type    | Description                                              |
-|----------------------|---------|----------------------------------------------------------|
-| `observedGeneration` | `int64` | The `.metadata.generation` last processed by the controller. |
-
-### status.lastReconcileTime
-
-| Field               | Type          | Description                                     |
-|---------------------|---------------|-------------------------------------------------|
-| `lastReconcileTime` | `*metav1.Time`| Timestamp of the last successful reconciliation.|
-
-### status.managedResources
-
-| Field                | Type     | Description                           |
-|----------------------|----------|---------------------------------------|
-| `statefulSet`        | `string` | Name of the managed StatefulSet.      |
-| `deployment`         | `string` | Name of the legacy Deployment (deprecated, used during migration). |
-| `service`            | `string` | Name of the managed Service.          |
-| `configMap`          | `string` | Name of the managed ConfigMap.        |
-| `pvc`                | `string` | Name of the managed PVC.             |
-| `networkPolicy`      | `string` | Name of the managed NetworkPolicy.    |
-| `podDisruptionBudget`| `string` | Name of the managed PDB.             |
-| `serviceAccount`     | `string` | Name of the managed ServiceAccount.   |
-| `role`               | `string` | Name of the managed Role.            |
-| `roleBinding`        | `string` | Name of the managed RoleBinding.      |
-| `gatewayTokenSecret` | `string` | Name of the auto-generated gateway token Secret. |
-| `prometheusRule`     | `string` | Name of the managed PrometheusRule. |
-| `grafanaDashboardOperator` | `string` | Name of the operator overview dashboard ConfigMap. |
-| `grafanaDashboardInstance` | `string` | Name of the instance detail dashboard ConfigMap. |
-| `horizontalPodAutoscaler` | `string` | Name of the managed HorizontalPodAutoscaler. |
-| `backupCronJob`      | `string` | Name of the managed periodic backup CronJob. |
-| `tailscaleStateSecret` | `string` | Name of the Secret used to persist Tailscale node identity and TLS certificate state. |
-
-### status.backup and restore
-
-| Field            | Type           | Description                                              |
-|------------------|----------------|----------------------------------------------------------|
-| `backingUpSince` | `*metav1.Time` | Timestamp when the instance entered the BackingUp phase. Used to enforce `spec.backup.timeout`. Cleared when the phase changes. |
-| `backupJobName`  | `string`       | Name of the active backup Job.                           |
-| `restoreJobName` | `string`       | Name of the active restore Job.                          |
-| `lastBackupPath` | `string`       | S3 path of the last successful backup.                   |
-| `lastBackupTime` | `*metav1.Time` | Timestamp of the last successful backup.                 |
-| `restoredFrom`   | `string`       | S3 path this instance was restored from.                 |
-
-### status.autoUpdate
-
-Tracks the state of automatic version updates.
-
-| Field                | Type           | Description                                                                              |
-|----------------------|----------------|------------------------------------------------------------------------------------------|
-| `lastCheckTime`      | `*metav1.Time` | When the registry was last checked for new versions.                                     |
-| `latestVersion`      | `string`       | Latest version available in the registry.                                                |
-| `currentVersion`     | `string`       | Version currently running.                                                               |
-| `pendingVersion`     | `string`       | Set during an in-flight update to the version being applied.                             |
-| `updatePhase`        | `string`       | Progress of an in-flight update. One of: `""`, `BackingUp`, `ApplyingUpdate`, `HealthCheck`, `RollingBack`. |
-| `lastUpdateTime`     | `*metav1.Time` | When the last successful update was applied.                                             |
-| `lastUpdateError`    | `string`       | Error message from the last failed update attempt.                                       |
-| `previousVersion`    | `string`       | Version before the last update (used for rollback).                                      |
-| `preUpdateBackupPath`| `string`       | S3 path of the pre-update backup (used for rollback restore).                            |
-| `failedVersion`      | `string`       | Version that failed health checks and will be skipped in future checks. Cleared when a newer version becomes available. |
-| `rollbackCount`      | `int32`        | Consecutive rollback count. Auto-update pauses after 3. Reset to 0 on any successful update. |
-
----
-
-## Backup and Restore
-
-See the [Backup and Restore guide](backup-restore.md) for S3 credentials, scheduled backups, restore, clone/migrate, and Workload Identity setup.
-
----
-
-## Related Guides
-
-- [Backup and Restore](backup-restore.md) - S3-backed PVC backup, scheduled backups, restore, clone/migrate workflows, and Workload Identity
-- [Model Fallback Chains](model-fallback.md) - configure multi-provider fallback via environment variables
-- [Custom AI Providers](custom-providers.md) - Ollama sidecar, vLLM, and other self-hosted models
-- [External Secrets Operator Integration](external-secrets.md) - sync API keys from AWS, Vault, GCP, etc.
-
----
-
-## OpenClawSelfConfig (v1alpha1)
-
-**Group**: `openclaw.rocks`
-**Version**: `v1alpha1`
-**Kind**: `OpenClawSelfConfig`
-**Scope**: Namespaced
-**Short name**: `ocsc`
-
-An `OpenClawSelfConfig` represents a request from an agent to modify its own `OpenClawInstance` spec. The operator validates the request against the parent instance's `selfConfigure.allowedActions` policy and applies approved changes.
-
-### Print Columns
-
-| Column    | JSON Path                          |
-|-----------|------------------------------------|
-| Instance  | `.spec.instanceRef`                |
-| Phase     | `.status.phase`                    |
-| Age       | `.metadata.creationTimestamp`      |
-
-### Spec Fields
-
-| Field                | Type                      | Default | Description                                                                   |
-|----------------------|---------------------------|---------|-------------------------------------------------------------------------------|
-| `instanceRef`        | `string`                  | (required) | Name of the parent `OpenClawInstance` in the same namespace.               |
-| `addSkills`          | `[]string`                | --      | Skills to add. Max 10 items.                                                  |
-| `removeSkills`       | `[]string`                | --      | Skills to remove. Max 10 items.                                               |
-| `configPatch`        | `RawConfig`               | --      | Partial JSON to deep-merge into `spec.config.raw`. Protected keys under `gateway` are rejected. |
-| `addWorkspaceFiles`  | `map[string]string`       | --      | Filenames to content to add to workspace. Max 10 entries.                     |
-| `removeWorkspaceFiles` | `[]string`              | --      | Workspace filenames to remove. Max 10 items.                                  |
-| `addEnvVars`         | `[]SelfConfigEnvVar`      | --      | Environment variables to add (plain values only, no secret refs). Max 10 items. |
-| `removeEnvVars`      | `[]string`                | --      | Environment variable names to remove. Max 10 items.                           |
-
-**SelfConfigEnvVar:**
-
-| Field   | Type     | Description                   |
-|---------|----------|-------------------------------|
-| `name`  | `string` | Environment variable name.    |
-| `value` | `string` | Environment variable value.   |
-
-### Status Fields
-
-| Field            | Type          | Description                                                  |
-|------------------|---------------|--------------------------------------------------------------|
-| `phase`          | `string`      | Processing state: `Pending`, `Applied`, `Failed`, `Denied`.  |
-| `message`        | `string`      | Human-readable details about the current phase.              |
-| `completionTime` | `*metav1.Time`| Timestamp when the request reached a terminal phase.         |
-
-See the [OpenClawSelfConfig guide](openclaw-self-config.md) for lifecycle, server-side apply behavior, protected resources, and an example.
-
----
-
-## Full Example
-
-See the [Full Example](full-example.md) page for a complete annotated OpenClawInstance YAML.
-
----
-
-## OpenClawClusterDefaults (v1alpha1)
-
-**Group**: `openclaw.rocks`
-**Version**: `v1alpha1`
-**Kind**: `OpenClawClusterDefaults`
-**Scope**: Cluster
-**Short name**: `occd`
-
-### Spec fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `registry` | `string` | Default container image registry override applied when `spec.registry` is unset on an instance. Replaces the registry prefix of main, sidecar, and init-container images. |
-| `image.repository` | `string` | Default image repository when the instance's `spec.image.repository` is unset. |
-| `image.tag` | `string` | Default image tag when the instance has neither `spec.image.tag` nor `spec.image.digest` set. Never overrides a digest-pinned instance. |
-| `image.digest` | `string` | Default image digest when `spec.image.digest` is unset. |
-| `image.pullPolicy` | `PullPolicy` | Default pull policy when unset on the instance. |
-| `image.pullSecrets` | `[]LocalObjectReference` | Default pull secrets. Applied only when the instance has no pull secrets of its own (replace-only, not merged). |
-| `env` | `[]EnvVar` | Default environment variables merged into every instance's container env. Cluster defaults come first; instance entries with a matching `name` override the default's value in place; instance-only names are appended. |
-| `runtimeDeps.pnpm` | `bool` | When true, opts every instance into the pnpm runtime init container unless the instance has already set it true. Booleans are OR-merged because `unset` and `false` are indistinguishable. |
-| `runtimeDeps.python` | `bool` | Same OR-merge semantics for the Python/uv runtime init container. |
-
-See the [OpenClawClusterDefaults guide](openclaw-cluster-defaults.md) for an example and behavior notes.
-
-### Status fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `conditions` | `[]metav1.Condition` | Current state of the singleton. |
-| `observedGeneration` | `int64` | Generation of the spec most recently processed by the operator. |
+
+_Appears in:_
+- [SecuritySpec](#securityspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `configMapName` _string_ | ConfigMapName is the name of a ConfigMap containing the CA bundle.<br />The ConfigMap should have a key matching the Key field. |  | Optional: \{\} <br /> |
+| `secretName` _string_ | SecretName is the name of a Secret containing the CA bundle.<br />The Secret should have a key matching the Key field.<br />Only one of ConfigMapName or SecretName should be set. |  | Optional: \{\} <br /> |
+| `key` _string_ | Key is the key in the ConfigMap or Secret containing the CA bundle. | ca-bundle.crt | Optional: \{\} <br /> |
+
+
+#### ChromiumImageSpec
+
+
+
+ChromiumImageSpec defines the Chromium container image
+
+
+
+_Appears in:_
+- [ChromiumSpec](#chromiumspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `repository` _string_ | Repository is the container image repository | chromedp/headless-shell | Optional: \{\} <br /> |
+| `tag` _string_ | Tag is the container image tag | stable | Optional: \{\} <br /> |
+| `digest` _string_ | Digest is the container image digest for supply chain security |  | Optional: \{\} <br /> |
+
+
+#### ChromiumPersistenceSpec
+
+
+
+ChromiumPersistenceSpec configures persistent storage for Chromium browser profiles
+
+
+
+_Appears in:_
+- [ChromiumSpec](#chromiumspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables persistent storage for the Chromium browser profile.<br />When true, a PVC is created (or an existing one is used) and mounted at<br />/chromium-data. The --user-data-dir flag is set automatically so that<br />cookies, localStorage, session tokens, and cached credentials survive<br />pod restarts. | false | Optional: \{\} <br /> |
+| `storageClass` _string_ | StorageClass is the name of the StorageClass to use for the PVC.<br />If empty, the cluster default StorageClass is used. |  | Optional: \{\} <br /> |
+| `size` _string_ | Size is the requested storage size for the Chromium profile PVC. | 1Gi | Optional: \{\} <br /> |
+| `existingClaim` _string_ | ExistingClaim is the name of a pre-existing PVC to use instead of<br />creating a new one. When set, storageClass and size are ignored. |  | Optional: \{\} <br /> |
+
+
+#### ChromiumSpec
+
+
+
+ChromiumSpec defines the Chromium sidecar configuration
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables the Chromium sidecar for browser automation | false | Optional: \{\} <br /> |
+| `image` _[ChromiumImageSpec](#chromiumimagespec)_ | Image configures the Chromium container image |  | Optional: \{\} <br /> |
+| `resources` _[ResourcesSpec](#resourcesspec)_ | Resources specifies compute resources for the Chromium container |  | Optional: \{\} <br /> |
+| `persistence` _[ChromiumPersistenceSpec](#chromiumpersistencespec)_ | Persistence configures persistent storage for the Chromium browser profile.<br />When enabled, browser state (cookies, localStorage, session tokens) survives<br />pod restarts. When disabled (default), an emptyDir is used and all browser<br />state is lost on restart. |  | Optional: \{\} <br /> |
+| `extraArgs` _string array_ | ExtraArgs specifies additional command-line arguments passed to the<br />Chromium process. These are appended to the default arguments.<br />Example: ["--disable-blink-features=AutomationControlled", "--user-agent=Mozilla/5.0 ..."] |  | Optional: \{\} <br /> |
+| `extraEnv` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | ExtraEnv specifies additional environment variables for the Chromium<br />sidecar container, merged with the operator-managed variables. |  | Optional: \{\} <br /> |
+
+
+#### ConfigMapKeySelector
+
+
+
+ConfigMapKeySelector selects a key from a ConfigMap
+
+
+
+_Appears in:_
+- [ConfigSpec](#configspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name of the ConfigMap |  |  |
+| `key` _string_ | Key in the ConfigMap to use | openclaw.json | Optional: \{\} <br /> |
+
+
+#### ConfigMapNameSelector
+
+
+
+ConfigMapNameSelector references a ConfigMap by name.
+Unlike ConfigMapKeySelector, all keys in the ConfigMap are used.
+
+
+
+_Appears in:_
+- [AdditionalWorkspace](#additionalworkspace)
+- [WorkspaceSpec](#workspacespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the name of the ConfigMap to reference. |  | MinLength: 1 <br /> |
+
+
+#### ConfigSpec
+
+
+
+ConfigSpec defines the OpenClaw configuration
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `configMapRef` _[ConfigMapKeySelector](#configmapkeyselector)_ | ConfigMapRef references a ConfigMap containing the openclaw.json configuration |  | Optional: \{\} <br /> |
+| `raw` _[RawConfig](#rawconfig)_ | Raw is inline openclaw.json configuration (used if ConfigMapRef is not set) |  | Optional: \{\} <br /> |
+| `mergeMode` _string_ | MergeMode controls how operator-managed config is applied to the PVC.<br />"overwrite" replaces the config file on every pod restart.<br />"merge" deep-merges operator config with existing PVC config, preserving runtime changes. | overwrite | Enum: [overwrite merge] <br />Optional: \{\} <br /> |
+| `format` _string_ | Format specifies the config file format.<br />"json" (default) expects standard JSON. "json5" accepts JSON5 (comments, trailing commas).<br />JSON5 is converted to standard JSON by the init container using npx json5.<br />JSON5 requires configMapRef (inline raw config must be valid JSON). | json | Enum: [json json5] <br />Optional: \{\} <br /> |
+
+
+#### ContainerSecurityContextSpec
+
+
+
+ContainerSecurityContextSpec defines container-level security context
+
+
+
+_Appears in:_
+- [SecuritySpec](#securityspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `allowPrivilegeEscalation` _boolean_ | AllowPrivilegeEscalation controls whether a process can gain more privileges | false | Optional: \{\} <br /> |
+| `readOnlyRootFilesystem` _boolean_ | ReadOnlyRootFilesystem mounts the container's root filesystem as read-only<br />The PVC at ~/.openclaw/ provides writable home, and a /tmp emptyDir handles temp files | true | Optional: \{\} <br /> |
+| `capabilities` _[Capabilities](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#capabilities-v1-core)_ | Capabilities to add/drop |  | Optional: \{\} <br /> |
+| `runAsNonRoot` _boolean_ | RunAsNonRoot indicates that the container must run as a non-root user.<br />When not set, inherits from podSecurityContext.runAsNonRoot. |  | Optional: \{\} <br /> |
+| `runAsUser` _integer_ | RunAsUser is the UID to run the entrypoint of the container process.<br />When not set, inherits from podSecurityContext.runAsUser. |  | Optional: \{\} <br /> |
+
+
+#### GatewaySpec
+
+
+
+GatewaySpec configures the gateway reverse proxy and authentication token
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled controls whether the built-in gateway reverse proxy sidecar is<br />injected into the pod. When false, no proxy container is added and health<br />probes target the OpenClaw gateway directly on port 18789.<br />Defaults to true. | true | Optional: \{\} <br /> |
+| `existingSecret` _string_ | ExistingSecret is the name of a user-managed Secret containing the gateway token.<br />The Secret must have a key named "token". When set, the operator skips<br />auto-generating a gateway token Secret and uses this Secret instead. |  | Optional: \{\} <br /> |
+| `controlUiOrigins` _string array_ | ControlUiOrigins is a list of additional allowed origins for the Control UI.<br />The operator always auto-injects localhost origins (http://localhost:18789,<br />http://127.0.0.1:18789) and derives origins from ingress hosts. Use this<br />field to add extra origins (e.g., custom reverse proxy URLs). |  | MaxItems: 20 <br />Optional: \{\} <br /> |
+
+
+#### GrafanaDashboardSpec
+
+
+
+GrafanaDashboardSpec configures auto-provisioned Grafana dashboard ConfigMaps
+
+
+
+_Appears in:_
+- [MetricsSpec](#metricsspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables Grafana dashboard ConfigMap creation | false | Optional: \{\} <br /> |
+| `labels` _object (keys:string, values:string)_ | Labels to add to the dashboard ConfigMaps (in addition to grafana_dashboard: "1") |  | Optional: \{\} <br /> |
+| `folder` _string_ | Folder is the Grafana folder to place the dashboards in | OpenClaw | Optional: \{\} <br /> |
+
+
+#### ImageSpec
+
+
+
+ImageSpec defines the container image configuration
+
+
+
+_Appears in:_
+- [OpenClawClusterDefaultsSpec](#openclawclusterdefaultsspec)
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `repository` _string_ | Repository is the container image repository | ghcr.io/openclaw/openclaw | Optional: \{\} <br /> |
+| `tag` _string_ | Tag is the container image tag | latest | Optional: \{\} <br /> |
+| `digest` _string_ | Digest is the container image digest (overrides tag if specified) |  | Optional: \{\} <br /> |
+| `pullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core)_ | PullPolicy specifies when to pull the image | IfNotPresent | Enum: [Always IfNotPresent Never] <br />Optional: \{\} <br /> |
+| `pullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core) array_ | PullSecrets is a list of secret names for pulling from private registries |  | Optional: \{\} <br /> |
+
+
+#### IngressBasicAuthSpec
+
+
+
+IngressBasicAuthSpec configures HTTP Basic Authentication for the Ingress.
+
+
+
+_Appears in:_
+- [IngressSecuritySpec](#ingresssecurityspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables basic authentication. | false | Optional: \{\} <br /> |
+| `existingSecret` _string_ | ExistingSecret is the name of an existing Secret that already contains<br />htpasswd-formatted content in a key named "auth".<br />When set, the operator uses this Secret instead of generating one. |  | Optional: \{\} <br /> |
+| `username` _string_ | Username for the auto-generated htpasswd Secret.<br />Ignored when existingSecret is set. | openclaw | MaxLength: 64 <br />Optional: \{\} <br /> |
+| `realm` _string_ | Realm is the authentication realm shown in browser prompts. | OpenClaw | Optional: \{\} <br /> |
+
+
+#### IngressHost
+
+
+
+IngressHost defines a host for the Ingress
+
+
+
+_Appears in:_
+- [IngressSpec](#ingressspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `host` _string_ | Host is the fully qualified domain name |  |  |
+| `paths` _[IngressPath](#ingresspath) array_ | Paths is a list of paths to route |  | Optional: \{\} <br /> |
+
+
+#### IngressPath
+
+
+
+IngressPath defines a path for the Ingress
+
+
+
+_Appears in:_
+- [IngressHost](#ingresshost)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `path` _string_ | Path is the path to route | / | Optional: \{\} <br /> |
+| `pathType` _string_ | PathType determines how the path should be matched | Prefix | Enum: [Prefix Exact ImplementationSpecific] <br />Optional: \{\} <br /> |
+| `port` _integer_ | Port is the backend service port number to route traffic to.<br />Defaults to the gateway port (18789) when not set. |  | Maximum: 65535 <br />Minimum: 1 <br />Optional: \{\} <br /> |
+
+
+#### IngressSecuritySpec
+
+
+
+IngressSecuritySpec defines security settings for the Ingress
+
+
+
+_Appears in:_
+- [IngressSpec](#ingressspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `forceHTTPS` _boolean_ | ForceHTTPS redirects all HTTP traffic to HTTPS | true | Optional: \{\} <br /> |
+| `enableHSTS` _boolean_ | EnableHSTS enables HTTP Strict Transport Security | true | Optional: \{\} <br /> |
+| `rateLimiting` _[RateLimitingSpec](#ratelimitingspec)_ | RateLimiting configures rate limiting |  | Optional: \{\} <br /> |
+| `basicAuth` _[IngressBasicAuthSpec](#ingressbasicauthspec)_ | BasicAuth configures HTTP Basic Authentication for the Ingress.<br />Disabled by default. When enabled without an existingSecret, the operator<br />auto-generates a random password and stores it in a managed Secret. |  | Optional: \{\} <br /> |
+
+
+#### IngressSpec
+
+
+
+IngressSpec defines the Ingress configuration
+
+
+
+_Appears in:_
+- [NetworkingSpec](#networkingspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables Ingress creation | false | Optional: \{\} <br /> |
+| `className` _string_ | ClassName is the name of the IngressClass to use |  | Optional: \{\} <br /> |
+| `annotations` _object (keys:string, values:string)_ | Annotations to add to the Ingress |  | Optional: \{\} <br /> |
+| `hosts` _[IngressHost](#ingresshost) array_ | Hosts is a list of hosts to route traffic for |  | Optional: \{\} <br /> |
+| `tls` _[IngressTLS](#ingresstls) array_ | TLS configuration |  | Optional: \{\} <br /> |
+| `security` _[IngressSecuritySpec](#ingresssecurityspec)_ | Security configures ingress security settings |  | Optional: \{\} <br /> |
+
+
+#### IngressTLS
+
+
+
+IngressTLS defines TLS configuration for the Ingress
+
+
+
+_Appears in:_
+- [IngressSpec](#ingressspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `hosts` _string array_ | Hosts are a list of hosts included in the TLS certificate |  |  |
+| `secretName` _string_ | SecretName is the name of the secret containing the TLS certificate |  |  |
+
+
+#### LoggingSpec
+
+
+
+LoggingSpec defines logging configuration
+
+
+
+_Appears in:_
+- [ObservabilitySpec](#observabilityspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `level` _string_ | Level is the log level | info | Enum: [debug info warn error] <br />Optional: \{\} <br /> |
+| `format` _string_ | Format is the log format | json | Enum: [json text] <br />Optional: \{\} <br /> |
+
+
+#### MetricsSpec
+
+
+
+MetricsSpec defines metrics configuration
+
+
+
+_Appears in:_
+- [ObservabilitySpec](#observabilityspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables metrics endpoint | true | Optional: \{\} <br /> |
+| `port` _integer_ | Port is the port to expose metrics on | 9090 | Optional: \{\} <br /> |
+| `serviceMonitor` _[ServiceMonitorSpec](#servicemonitorspec)_ | ServiceMonitor configures the Prometheus ServiceMonitor |  | Optional: \{\} <br /> |
+| `prometheusRule` _[PrometheusRuleSpec](#prometheusrulespec)_ | PrometheusRule configures auto-provisioned PrometheusRule alerts |  | Optional: \{\} <br /> |
+| `grafanaDashboard` _[GrafanaDashboardSpec](#grafanadashboardspec)_ | GrafanaDashboard configures auto-provisioned Grafana dashboard ConfigMaps |  | Optional: \{\} <br /> |
+
+
+#### NetworkPolicySpec
+
+
+
+NetworkPolicySpec configures network isolation for the OpenClaw instance
+
+
+
+_Appears in:_
+- [SecuritySpec](#securityspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables network policy creation | true | Optional: \{\} <br /> |
+| `allowedIngressCIDRs` _string array_ | AllowedIngressCIDRs is a list of CIDRs allowed to access this instance |  | Optional: \{\} <br /> |
+| `allowedIngressNamespaces` _string array_ | AllowedIngressNamespaces is a list of namespace names allowed to access this instance |  | Optional: \{\} <br /> |
+| `allowedEgressCIDRs` _string array_ | AllowedEgressCIDRs is a list of CIDRs this instance can reach<br />Default allows all egress on port 443 for AI APIs |  | Optional: \{\} <br /> |
+| `allowDNS` _boolean_ | AllowDNS allows DNS resolution (port 53) | true | Optional: \{\} <br /> |
+| `additionalEgress` _[NetworkPolicyEgressRule](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#networkpolicyegressrule-v1-networking) array_ | AdditionalEgress appends custom egress rules to the default DNS + HTTPS rules.<br />Use this to allow traffic to cluster-internal services on non-standard ports. |  | Optional: \{\} <br /> |
+
+
+#### NetworkingSpec
+
+
+
+NetworkingSpec defines network-related configuration
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `service` _[ServiceSpec](#servicespec)_ | Service configures the Kubernetes Service |  | Optional: \{\} <br /> |
+| `ingress` _[IngressSpec](#ingressspec)_ | Ingress configures the Kubernetes Ingress |  | Optional: \{\} <br /> |
+
+
+#### ObservabilitySpec
+
+
+
+ObservabilitySpec defines observability configuration
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `metrics` _[MetricsSpec](#metricsspec)_ | Metrics configures Prometheus metrics |  | Optional: \{\} <br /> |
+| `logging` _[LoggingSpec](#loggingspec)_ | Logging configures logging |  | Optional: \{\} <br /> |
+
+
+#### OllamaImageSpec
+
+
+
+OllamaImageSpec defines the Ollama container image
+
+
+
+_Appears in:_
+- [OllamaSpec](#ollamaspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `repository` _string_ | Repository is the container image repository | ollama/ollama | Optional: \{\} <br /> |
+| `tag` _string_ | Tag is the container image tag | latest | Optional: \{\} <br /> |
+| `digest` _string_ | Digest is the container image digest for supply chain security |  | Optional: \{\} <br /> |
+
+
+#### OllamaSpec
+
+
+
+OllamaSpec defines the Ollama sidecar configuration
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables the Ollama sidecar | false | Optional: \{\} <br /> |
+| `image` _[OllamaImageSpec](#ollamaimagespec)_ | Image configures the Ollama container image |  | Optional: \{\} <br /> |
+| `models` _string array_ | Models is a list of models to pre-pull during pod init (e.g. ["llama3.2", "nomic-embed-text"]) |  | MaxItems: 10 <br />Optional: \{\} <br /> |
+| `resources` _[ResourcesSpec](#resourcesspec)_ | Resources specifies compute resources for the Ollama container |  | Optional: \{\} <br /> |
+| `storage` _[OllamaStorageSpec](#ollamastoragespec)_ | Storage configures the model cache volume |  | Optional: \{\} <br /> |
+| `gpu` _integer_ | GPU is the number of NVIDIA GPUs to allocate (sets nvidia.com/gpu resource limit) |  | Minimum: 0 <br />Optional: \{\} <br /> |
+
+
+#### OllamaStorageSpec
+
+
+
+OllamaStorageSpec configures the Ollama model cache volume
+
+
+
+_Appears in:_
+- [OllamaSpec](#ollamaspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `sizeLimit` _string_ | SizeLimit is the size limit for the emptyDir model cache (default "20Gi") | 20Gi | Optional: \{\} <br /> |
+| `existingClaim` _string_ | ExistingClaim is the name of an existing PVC for persistent model storage |  | Optional: \{\} <br /> |
+
+
+#### OpenClawClusterDefaults
+
+
+
+OpenClawClusterDefaults is a cluster-scoped singleton (name must be "cluster")
+that provides default values merged into every OpenClawInstance at reconcile
+time. It exists so platform operators managing air-gapped or restricted-network
+environments can set a single source of truth for image registry mirrors,
+shared environment variables (e.g. NPM_CONFIG_REGISTRY, PIP_INDEX_URL), and
+runtime-dep init containers without duplicating the same boilerplate in every
+OpenClawInstance manifest.
+
+Precedence: per-instance fields always win over cluster defaults. A default
+is only applied when the corresponding instance field is unset.
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `openclaw.rocks/v1alpha1` | | |
+| `kind` _string_ | `OpenClawClusterDefaults` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[OpenClawClusterDefaultsSpec](#openclawclusterdefaultsspec)_ |  |  |  |
+
+
+#### OpenClawClusterDefaultsSpec
+
+
+
+OpenClawClusterDefaultsSpec defines cluster-wide defaults that the operator
+applies to every OpenClawInstance at reconcile time. Per-instance fields
+always win: a default is only applied when the instance field is unset.
+
+
+
+_Appears in:_
+- [OpenClawClusterDefaults](#openclawclusterdefaults)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `registry` _string_ | Registry is the default container image registry override applied to<br />instances where spec.registry is unset. Replaces the registry prefix of<br />all container images (main, sidecars, init containers).<br />Example: "my-registry.example.com". |  | Optional: \{\} <br /> |
+| `image` _[ImageSpec](#imagespec)_ | Image is the default container image configuration applied to instances<br />where the corresponding instance fields are unset. Each sub-field is<br />merged independently (e.g. a cluster-default tag still applies even when<br />the instance sets its own repository). |  | Optional: \{\} <br /> |
+| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Env is a list of default environment variables merged into every<br />instance's container env. Instance-level env entries with the same Name<br />override the cluster default for that name. Defaults appear first in<br />the resulting env list, followed by instance-only names. |  | Optional: \{\} <br /> |
+| `runtimeDeps` _[RuntimeDepsSpec](#runtimedepsspec)_ | RuntimeDeps configures the default set of built-in init containers<br />(pnpm, Python) applied to instances where the corresponding fields are<br />unset. A cluster default of true for a runtime dep is always applied<br />unless the instance explicitly opts out (sets the field to false).<br />NOTE: because RuntimeDepsSpec fields are plain booleans, "unset" and<br />"false" are indistinguishable; cluster defaults are OR-merged here. |  | Optional: \{\} <br /> |
+
+
+#### OpenClawInstance
+
+
+
+OpenClawInstance is the Schema for the openclawinstances API
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `openclaw.rocks/v1alpha1` | | |
+| `kind` _string_ | `OpenClawInstance` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[OpenClawInstanceSpec](#openclawinstancespec)_ |  |  |  |
+
+
+#### OpenClawInstanceSpec
+
+
+
+OpenClawInstanceSpec defines the desired state of OpenClawInstance
+
+
+
+_Appears in:_
+- [OpenClawInstance](#openclawinstance)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `registry` _string_ | Registry is the global container image registry override.<br />When set, this registry replaces the registry part of all container images<br />used by the instance (main container, sidecars, init containers).<br />Example: "my-registry.example.com" will change "ghcr.io/openclaw/openclaw:latest"<br />to "my-registry.example.com/openclaw/openclaw:latest". |  | Optional: \{\} <br /> |
+| `image` _[ImageSpec](#imagespec)_ | Image configuration for the OpenClaw container |  | Optional: \{\} <br /> |
+| `config` _[ConfigSpec](#configspec)_ | Config specifies the OpenClaw configuration |  | Optional: \{\} <br /> |
+| `workspace` _[WorkspaceSpec](#workspacespec)_ | Workspace configures initial workspace files seeded into the instance.<br />Files are copied once on first boot and never overwritten, so agent<br />modifications survive pod restarts. |  | Optional: \{\} <br /> |
+| `skills` _string array_ | Skills is a list of skills to install via init container.<br />Each entry is either a ClawHub skill identifier (e.g., "@anthropic/mcp-server-fetch")<br />or an npm package prefixed with "npm:" (e.g., "npm:@openclaw/matrix").<br />npm lifecycle scripts are disabled for security (see #91). |  | MaxItems: 20 <br />Optional: \{\} <br /> |
+| `plugins` _string array_ | Plugins is a list of plugins to install via init container.<br />Each entry is an npm package name (e.g., "@martian-engineering/lossless-claw").<br />An optional "npm:" prefix is accepted and stripped before installation.<br />npm lifecycle scripts are disabled for security. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
+| `envFrom` _[EnvFromSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envfromsource-v1-core) array_ | EnvFrom is a list of sources to populate environment variables from<br />Use this for API keys and other secrets (e.g., ANTHROPIC_API_KEY, OPENAI_API_KEY) |  | Optional: \{\} <br /> |
+| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Env is a list of environment variables to set in the container |  | Optional: \{\} <br /> |
+| `resources` _[ResourcesSpec](#resourcesspec)_ | Resources specifies the compute resources for the OpenClaw container |  | Optional: \{\} <br /> |
+| `security` _[SecuritySpec](#securityspec)_ | Security specifies security-related configuration |  | Optional: \{\} <br /> |
+| `shareProcessNamespace` _boolean_ | ShareProcessNamespace enables PID namespace sharing between all containers<br />in the pod. When true, the infrastructure (pause) container becomes PID 1<br />and reaps zombie processes, which prevents accumulation of defunct helper<br />processes (git, plugins, QMD memory, shells) under a Node.js gateway that<br />does not call waitpid(). Defaults to true.<br />Security note: enabling this lets every container in the pod see and signal<br />every other container's processes. A compromised sidecar (Tailscale, Ollama,<br />browser, custom) could send signals to the gateway and vice versa. Set to<br />false to keep per-container PID isolation; you are then responsible for<br />reaping zombies (e.g. by baking tini or dumb-init into the image). | true | Optional: \{\} <br /> |
+| `storage` _[StorageSpec](#storagespec)_ | Storage specifies persistent storage configuration |  | Optional: \{\} <br /> |
+| `chromium` _[ChromiumSpec](#chromiumspec)_ | Chromium enables the Chromium sidecar for browser automation |  | Optional: \{\} <br /> |
+| `tailscale` _[TailscaleSpec](#tailscalespec)_ | Tailscale configures Tailscale integration for tailnet access and HTTPS |  | Optional: \{\} <br /> |
+| `ollama` _[OllamaSpec](#ollamaspec)_ | Ollama enables the Ollama sidecar for local LLM inference |  | Optional: \{\} <br /> |
+| `webTerminal` _[WebTerminalSpec](#webterminalspec)_ | WebTerminal enables a browser-based terminal (ttyd) sidecar for debugging |  | Optional: \{\} <br /> |
+| `initContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | InitContainers is a list of additional init containers to run before the main container.<br />They run after the operator-managed init-config and init-skills containers. |  | MaxItems: 10 <br />Optional: \{\} <br /> |
+| `sidecars` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Sidecars is a list of additional sidecar containers to inject into the pod.<br />Use this for custom sidecars like database proxies, log forwarders, or service meshes. |  | Optional: \{\} <br /> |
+| `sidecarVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | SidecarVolumes is a list of additional volumes to make available to sidecar containers. |  | Optional: \{\} <br /> |
+| `extraVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | ExtraVolumes adds additional volumes to the pod.<br />These volumes are available to the main container via ExtraVolumeMounts. |  | MaxItems: 10 <br />Optional: \{\} <br /> |
+| `extraVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core) array_ | ExtraVolumeMounts adds additional volume mounts to the main container.<br />Use with ExtraVolumes to mount ConfigMaps, Secrets, NFS shares, or CSI volumes. |  | MaxItems: 10 <br />Optional: \{\} <br /> |
+| `networking` _[NetworkingSpec](#networkingspec)_ | Networking specifies network-related configuration |  | Optional: \{\} <br /> |
+| `probes` _[ProbesSpec](#probesspec)_ | Probes configures health probes for the OpenClaw container |  | Optional: \{\} <br /> |
+| `observability` _[ObservabilitySpec](#observabilityspec)_ | Observability configures metrics and logging |  | Optional: \{\} <br /> |
+| `availability` _[AvailabilitySpec](#availabilityspec)_ | Availability configures high availability settings |  | Optional: \{\} <br /> |
+| `suspended` _boolean_ | Suspended scales the workload to zero replicas when true.<br />Non-runtime resources (Service, ConfigMap, RBAC, NetworkPolicy, PVC)<br />remain fully managed. Set to false to resume normal operation. | false | Optional: \{\} <br /> |
+| `backup` _[BackupSpec](#backupspec)_ | Backup configures periodic scheduled backups to S3-compatible storage.<br />Requires the s3-backup-credentials Secret in the operator namespace and persistence enabled. |  | Optional: \{\} <br /> |
+| `restoreFrom` _string_ | RestoreFrom is the remote backup path to restore data from (e.g. "backups/\{tenantId\}/\{instanceId\}/\{timestamp\}").<br />When set, the operator restores PVC data from this path before creating the StatefulSet.<br />Cleared automatically after successful restore. |  | Optional: \{\} <br /> |
+| `runtimeDeps` _[RuntimeDepsSpec](#runtimedepsspec)_ | RuntimeDeps configures built-in init containers that install runtime<br />dependencies (pnpm, Python) for MCP servers and skills. |  | Optional: \{\} <br /> |
+| `gateway` _[GatewaySpec](#gatewayspec)_ | Gateway configures the gateway reverse proxy and authentication token |  | Optional: \{\} <br /> |
+| `autoUpdate` _[AutoUpdateSpec](#autoupdatespec)_ | AutoUpdate configures automatic version updates from the OCI registry |  | Optional: \{\} <br /> |
+| `selfConfigure` _[SelfConfigureSpec](#selfconfigurespec)_ | SelfConfigure enables agents to modify their own instance via OpenClawSelfConfig resources.<br />When enabled, the operator injects RBAC, env vars, and a helper skill into the workspace. |  | Optional: \{\} <br /> |
+| `podAnnotations` _object (keys:string, values:string)_ | PodAnnotations are extra annotations merged into the pod template metadata.<br />Operator-managed annotations (e.g. config-hash) take precedence on conflict. |  | Optional: \{\} <br /> |
+
+
+#### OpenClawSelfConfig
+
+
+
+OpenClawSelfConfig is the Schema for the openclawselfconfigs API.
+It represents a request from an agent to modify its own OpenClawInstance spec.
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `openclaw.rocks/v1alpha1` | | |
+| `kind` _string_ | `OpenClawSelfConfig` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[OpenClawSelfConfigSpec](#openclawselfconfigspec)_ |  |  |  |
+
+
+#### OpenClawSelfConfigSpec
+
+
+
+OpenClawSelfConfigSpec defines the desired changes to an OpenClawInstance.
+
+
+
+_Appears in:_
+- [OpenClawSelfConfig](#openclawselfconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `instanceRef` _string_ | InstanceRef is the name of the parent OpenClawInstance in the same namespace. |  | MinLength: 1 <br /> |
+| `addSkills` _string array_ | AddSkills is a list of skills to add to the instance. |  | MaxItems: 10 <br />Optional: \{\} <br /> |
+| `removeSkills` _string array_ | RemoveSkills is a list of skills to remove from the instance. |  | MaxItems: 10 <br />Optional: \{\} <br /> |
+| `configPatch` _[RawConfig](#rawconfig)_ | ConfigPatch is a partial JSON configuration to deep-merge into the instance config. |  | Optional: \{\} <br /> |
+| `addWorkspaceFiles` _object (keys:string, values:string)_ | AddWorkspaceFiles maps filenames to content to add to the workspace. |  | MaxProperties: 10 <br />Optional: \{\} <br /> |
+| `removeWorkspaceFiles` _string array_ | RemoveWorkspaceFiles is a list of workspace filenames to remove. |  | MaxItems: 10 <br />Optional: \{\} <br /> |
+| `addEnvVars` _[SelfConfigEnvVar](#selfconfigenvvar) array_ | AddEnvVars is a list of environment variables to add (plain values only). |  | MaxItems: 10 <br />Optional: \{\} <br /> |
+| `removeEnvVars` _string array_ | RemoveEnvVars is a list of environment variable names to remove. |  | MaxItems: 10 <br />Optional: \{\} <br /> |
+
+
+#### PersistenceSpec
+
+
+
+PersistenceSpec defines PVC configuration
+
+
+
+_Appears in:_
+- [StorageSpec](#storagespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables persistent storage | true | Optional: \{\} <br /> |
+| `storageClass` _string_ | StorageClass is the name of the StorageClass to use |  | Optional: \{\} <br /> |
+| `size` _string_ | Size is the size of the PVC (e.g., "10Gi") | 10Gi | Optional: \{\} <br /> |
+| `accessModes` _[PersistentVolumeAccessMode](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#persistentvolumeaccessmode-v1-core) array_ | AccessModes contains the desired access modes for the PVC | [ReadWriteOnce] | Optional: \{\} <br /> |
+| `existingClaim` _string_ | ExistingClaim is the name of an existing PVC to use |  | Optional: \{\} <br /> |
+| `orphan` _boolean_ | Orphan controls whether the PVC is retained when the OpenClawInstance is deleted.<br />When true (the default), the operator removes the owner reference from the PVC<br />before deleting the CR so Kubernetes does not garbage-collect it.<br />Set to false if you want the PVC deleted together with the CR. | true | Optional: \{\} <br /> |
+
+
+#### PodDisruptionBudgetSpec
+
+
+
+PodDisruptionBudgetSpec defines PDB configuration
+
+
+
+_Appears in:_
+- [AvailabilitySpec](#availabilityspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables PDB creation | true | Optional: \{\} <br /> |
+| `maxUnavailable` _integer_ | MaxUnavailable is the maximum number of pods that can be unavailable during disruption | 1 | Optional: \{\} <br /> |
+
+
+#### PodSecurityContextSpec
+
+
+
+PodSecurityContextSpec defines pod-level security context
+
+
+
+_Appears in:_
+- [SecuritySpec](#securityspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `runAsUser` _integer_ | RunAsUser is the UID to run the entrypoint of the container process | 1000 | Optional: \{\} <br /> |
+| `runAsGroup` _integer_ | RunAsGroup is the GID to run the entrypoint of the container process | 1000 | Optional: \{\} <br /> |
+| `fsGroup` _integer_ | FSGroup is a special supplemental group that applies to all containers | 1000 | Optional: \{\} <br /> |
+| `fsGroupChangePolicy` _[PodFSGroupChangePolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podfsgroupchangepolicy-v1-core)_ | FSGroupChangePolicy defines the behavior of changing ownership and permission of the volume.<br />"OnRootMismatch" skips recursive chown when ownership already matches, improving startup<br />time for large PVCs. "Always" recursively chowns on every mount (Kubernetes default). |  | Enum: [OnRootMismatch Always] <br />Optional: \{\} <br /> |
+| `runAsNonRoot` _boolean_ | RunAsNonRoot indicates that the container must run as a non-root user | true | Optional: \{\} <br /> |
+
+
+#### ProbeSpec
+
+
+
+ProbeSpec defines a health probe
+
+
+
+_Appears in:_
+- [ProbesSpec](#probesspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables the probe | true | Optional: \{\} <br /> |
+| `initialDelaySeconds` _integer_ | InitialDelaySeconds is the number of seconds after the container starts before the probe is initiated |  | Optional: \{\} <br /> |
+| `periodSeconds` _integer_ | PeriodSeconds is how often (in seconds) to perform the probe |  | Optional: \{\} <br /> |
+| `timeoutSeconds` _integer_ | TimeoutSeconds is the number of seconds after which the probe times out |  | Optional: \{\} <br /> |
+| `failureThreshold` _integer_ | FailureThreshold is the number of times to retry before giving up |  | Optional: \{\} <br /> |
+
+
+#### ProbesSpec
+
+
+
+ProbesSpec defines health probe configuration
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `liveness` _[ProbeSpec](#probespec)_ | Liveness probe configuration |  | Optional: \{\} <br /> |
+| `readiness` _[ProbeSpec](#probespec)_ | Readiness probe configuration |  | Optional: \{\} <br /> |
+| `startup` _[ProbeSpec](#probespec)_ | Startup probe configuration |  | Optional: \{\} <br /> |
+
+
+#### PrometheusRuleSpec
+
+
+
+PrometheusRuleSpec configures auto-provisioned PrometheusRule alerts
+
+
+
+_Appears in:_
+- [MetricsSpec](#metricsspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables PrometheusRule creation with operator alerts | false | Optional: \{\} <br /> |
+| `labels` _object (keys:string, values:string)_ | Labels to add to the PrometheusRule (e.g., for Prometheus rule selector matching) |  | Optional: \{\} <br /> |
+| `runbookBaseURL` _string_ | RunbookBaseURL is the base URL for alert runbook links | https://openclaw.rocks/docs/runbooks | Optional: \{\} <br /> |
+
+
+#### RBACRule
+
+
+
+RBACRule represents a RBAC rule
+
+
+
+_Appears in:_
+- [RBACSpec](#rbacspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiGroups` _string array_ | APIGroups is the name of the APIGroup that contains the resources |  |  |
+| `resources` _string array_ | Resources is a list of resources this rule applies to |  |  |
+| `verbs` _string array_ | Verbs is a list of verbs that apply to the resources |  |  |
+
+
+#### RBACSpec
+
+
+
+RBACSpec configures RBAC for the OpenClaw instance
+
+
+
+_Appears in:_
+- [SecuritySpec](#securityspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `createServiceAccount` _boolean_ | CreateServiceAccount creates a dedicated ServiceAccount for the instance | true | Optional: \{\} <br /> |
+| `serviceAccountName` _string_ | ServiceAccountName is the name of an existing ServiceAccount to use<br />Only used if CreateServiceAccount is false |  | Optional: \{\} <br /> |
+| `serviceAccountAnnotations` _object (keys:string, values:string)_ | ServiceAccountAnnotations are annotations to add to the managed ServiceAccount.<br />Use this for cloud provider integrations like AWS IRSA or GCP Workload Identity. |  | Optional: \{\} <br /> |
+| `additionalRules` _[RBACRule](#rbacrule) array_ | AdditionalRules adds custom RBAC rules to the generated Role |  | Optional: \{\} <br /> |
+
+
+#### RateLimitingSpec
+
+
+
+RateLimitingSpec defines rate limiting configuration
+
+
+
+_Appears in:_
+- [IngressSecuritySpec](#ingresssecurityspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables rate limiting | true | Optional: \{\} <br /> |
+| `requestsPerSecond` _integer_ | RequestsPerSecond is the maximum requests per second | 10 | Optional: \{\} <br /> |
+
+
+#### RawConfig
+
+
+
+RawConfig holds arbitrary JSON configuration for openclaw.json
+
+
+
+_Appears in:_
+- [ConfigSpec](#configspec)
+- [OpenClawSelfConfigSpec](#openclawselfconfigspec)
+
+
+
+#### ResourcesSpec
+
+
+
+ResourcesSpec defines compute resource requirements
+
+
+
+_Appears in:_
+- [ChromiumSpec](#chromiumspec)
+- [OllamaSpec](#ollamaspec)
+- [OpenClawInstanceSpec](#openclawinstancespec)
+- [TailscaleSpec](#tailscalespec)
+- [WebTerminalSpec](#webterminalspec)
+
+
+
+#### RuntimeDepsSpec
+
+
+
+RuntimeDepsSpec configures built-in init containers that install runtime
+dependencies to the data PVC for use by MCP servers and skills.
+
+
+
+_Appears in:_
+- [OpenClawClusterDefaultsSpec](#openclawclusterdefaultsspec)
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `pnpm` _boolean_ | Pnpm installs pnpm via corepack for npm-based MCP servers and skills. |  | Optional: \{\} <br /> |
+| `python` _boolean_ | Python installs Python 3.12 and uv for Python-based MCP servers and skills. |  | Optional: \{\} <br /> |
+
+
+#### SecuritySpec
+
+
+
+SecuritySpec defines security-related configuration
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `podSecurityContext` _[PodSecurityContextSpec](#podsecuritycontextspec)_ | PodSecurityContext holds pod-level security attributes |  | Optional: \{\} <br /> |
+| `containerSecurityContext` _[ContainerSecurityContextSpec](#containersecuritycontextspec)_ | ContainerSecurityContext holds container-level security attributes |  | Optional: \{\} <br /> |
+| `networkPolicy` _[NetworkPolicySpec](#networkpolicyspec)_ | NetworkPolicy configures network isolation |  | Optional: \{\} <br /> |
+| `rbac` _[RBACSpec](#rbacspec)_ | RBAC configures role-based access control |  | Optional: \{\} <br /> |
+| `caBundle` _[CABundleSpec](#cabundlespec)_ | CABundle injects a custom CA certificate bundle into all containers.<br />Use this in environments with TLS-intercepting proxies or private CAs. |  | Optional: \{\} <br /> |
+
+
+#### SelfConfigAction
+
+_Underlying type:_ _string_
+
+SelfConfigAction represents an action category that can be allowed for self-configuration.
+
+_Validation:_
+- Enum: [skills config workspaceFiles envVars]
+
+_Appears in:_
+- [SelfConfigureSpec](#selfconfigurespec)
+
+| Field | Description |
+| --- | --- |
+| `skills` |  |
+| `config` |  |
+| `workspaceFiles` |  |
+| `envVars` |  |
+
+
+#### SelfConfigEnvVar
+
+
+
+SelfConfigEnvVar defines a plain-value environment variable (no secret refs).
+
+
+
+_Appears in:_
+- [OpenClawSelfConfigSpec](#openclawselfconfigspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name of the environment variable. |  | MinLength: 1 <br /> |
+| `value` _string_ | Value of the environment variable. |  |  |
+
+
+
+
+#### SelfConfigureSpec
+
+
+
+SelfConfigureSpec configures whether an agent can modify its own instance.
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables self-configuration for this instance.<br />When true, the agent can create OpenClawSelfConfig resources to modify its own spec. | false | Optional: \{\} <br /> |
+| `allowedActions` _[SelfConfigAction](#selfconfigaction) array_ | AllowedActions restricts which action categories the agent can perform.<br />If empty and enabled is true, no actions are allowed (fail-safe). |  | Enum: [skills config workspaceFiles envVars] <br />MaxItems: 4 <br />Optional: \{\} <br /> |
+
+
+#### ServiceMonitorSpec
+
+
+
+ServiceMonitorSpec defines the ServiceMonitor configuration
+
+
+
+_Appears in:_
+- [MetricsSpec](#metricsspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables ServiceMonitor creation | false | Optional: \{\} <br /> |
+| `interval` _string_ | Interval is the scrape interval | 30s | Optional: \{\} <br /> |
+| `labels` _object (keys:string, values:string)_ | Labels to add to the ServiceMonitor |  | Optional: \{\} <br /> |
+
+
+#### ServicePortSpec
+
+
+
+ServicePortSpec defines a port exposed by the Service
+
+
+
+_Appears in:_
+- [ServiceSpec](#servicespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the name of the port |  | MinLength: 1 <br /> |
+| `port` _integer_ | Port is the port number exposed on the Service |  | Maximum: 65535 <br />Minimum: 1 <br /> |
+| `targetPort` _integer_ | TargetPort is the port on the container to route to (defaults to Port) |  | Maximum: 65535 <br />Minimum: 1 <br />Optional: \{\} <br /> |
+| `protocol` _[Protocol](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#protocol-v1-core)_ | Protocol is the protocol for the port | TCP | Enum: [TCP UDP SCTP] <br />Optional: \{\} <br /> |
+
+
+#### ServiceSpec
+
+
+
+ServiceSpec defines the Service configuration
+
+
+
+_Appears in:_
+- [NetworkingSpec](#networkingspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#servicetype-v1-core)_ | Type is the Kubernetes Service type | ClusterIP | Enum: [ClusterIP LoadBalancer NodePort] <br />Optional: \{\} <br /> |
+| `annotations` _object (keys:string, values:string)_ | Annotations to add to the Service |  | Optional: \{\} <br /> |
+| `ports` _[ServicePortSpec](#serviceportspec) array_ | Ports defines custom ports exposed on the Service.<br />When set, these replace the default gateway and canvas ports.<br />When empty, the operator creates default gateway (18789) and canvas (18793) ports. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
+
+
+#### StorageSpec
+
+
+
+StorageSpec defines persistent storage configuration
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `persistence` _[PersistenceSpec](#persistencespec)_ | Persistence configures the PersistentVolumeClaim |  | Optional: \{\} <br /> |
+
+
+#### TailscaleImageSpec
+
+
+
+TailscaleImageSpec defines the Tailscale sidecar container image
+
+
+
+_Appears in:_
+- [TailscaleSpec](#tailscalespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `repository` _string_ | Repository is the container image repository | ghcr.io/tailscale/tailscale | Optional: \{\} <br /> |
+| `tag` _string_ | Tag is the container image tag | latest | Optional: \{\} <br /> |
+| `digest` _string_ | Digest is the container image digest for supply chain security |  | Optional: \{\} <br /> |
+
+
+#### TailscaleSpec
+
+
+
+TailscaleSpec configures Tailscale integration for secure tailnet access.
+When enabled, a Tailscale sidecar container runs tailscaled and handles
+serve/funnel via TS_SERVE_CONFIG. An init container copies the tailscale
+CLI binary to a shared volume so the main container can call
+"tailscale whois" for SSO authentication.
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables Tailscale integration | false | Optional: \{\} <br /> |
+| `mode` _string_ | Mode selects the Tailscale mode.<br />"serve" exposes the instance to tailnet members only (default).<br />"funnel" exposes the instance to the public internet via Tailscale Funnel. | serve | Enum: [serve funnel] <br />Optional: \{\} <br /> |
+| `image` _[TailscaleImageSpec](#tailscaleimagespec)_ | Image configures the Tailscale sidecar container image.<br />The same image is used for the sidecar and the init container that<br />copies the tailscale CLI binary. |  | Optional: \{\} <br /> |
+| `authKeySecretRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core)_ | AuthKeySecretRef references a Secret containing the Tailscale auth key.<br />The Secret must have a key matching AuthKeySecretKey (default: "authkey").<br />Use ephemeral+reusable keys from the Tailscale admin console. |  | Optional: \{\} <br /> |
+| `authKeySecretKey` _string_ | AuthKeySecretKey is the key in the referenced Secret. | authkey | Optional: \{\} <br /> |
+| `hostname` _string_ | Hostname sets the Tailscale device name (defaults to instance name). |  | Optional: \{\} <br /> |
+| `authSSO` _boolean_ | AuthSSO enables passwordless login for tailnet members.<br />Sets gateway.auth.allowTailscale=true in the OpenClaw config. | false | Optional: \{\} <br /> |
+| `resources` _[ResourcesSpec](#resourcesspec)_ | Resources specifies compute resources for the Tailscale sidecar container. |  | Optional: \{\} <br /> |
+
+
+#### WebTerminalCredentialSpec
+
+
+
+WebTerminalCredentialSpec configures basic auth for the web terminal
+
+
+
+_Appears in:_
+- [WebTerminalSpec](#webterminalspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `secretRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core)_ | SecretRef references a Secret containing "username" and "password" keys |  |  |
+
+
+#### WebTerminalImageSpec
+
+
+
+WebTerminalImageSpec defines the ttyd container image
+
+
+
+_Appears in:_
+- [WebTerminalSpec](#webterminalspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `repository` _string_ | Repository is the container image repository | tsl0922/ttyd | Optional: \{\} <br /> |
+| `tag` _string_ | Tag is the container image tag | latest | Optional: \{\} <br /> |
+| `digest` _string_ | Digest is the container image digest for supply chain security |  | Optional: \{\} <br /> |
+
+
+#### WebTerminalSpec
+
+
+
+WebTerminalSpec defines the ttyd web terminal sidecar configuration
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables the ttyd web terminal sidecar for browser-based shell access | false | Optional: \{\} <br /> |
+| `image` _[WebTerminalImageSpec](#webterminalimagespec)_ | Image configures the ttyd container image |  | Optional: \{\} <br /> |
+| `resources` _[ResourcesSpec](#resourcesspec)_ | Resources specifies compute resources for the ttyd container |  | Optional: \{\} <br /> |
+| `readOnly` _boolean_ | ReadOnly starts ttyd in read-only mode (view-only, no input) | false | Optional: \{\} <br /> |
+| `credential` _[WebTerminalCredentialSpec](#webterminalcredentialspec)_ | Credential configures basic auth for the web terminal via a Secret.<br />The Secret must have "username" and "password" keys. |  | Optional: \{\} <br /> |
+
+
+#### WorkspaceSpec
+
+
+
+WorkspaceSpec configures initial workspace files for the instance.
+Files listed in InitialFiles are seeded once (only if they don't already
+exist on the PVC), so agent modifications survive pod restarts.
+
+
+
+_Appears in:_
+- [OpenClawInstanceSpec](#openclawinstancespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `configMapRef` _[ConfigMapNameSelector](#configmapnameselector)_ | ConfigMapRef references an external ConfigMap whose keys become workspace files.<br />All keys in the referenced ConfigMap are included as workspace files.<br />This is useful for GitOps workflows where workspace files (AGENT.md, SOUL.md, etc.)<br />are managed as standalone files and bundled via Kustomize configMapGenerator or similar.<br />Merge priority (highest wins):<br />1. Operator-injected files (ENVIRONMENT.md, BOOTSTRAP.md, SELFCONFIG.md, selfconfig.sh)<br />2. Inline initialFiles<br />3. External configMapRef entries<br />4. Skill pack files |  | Optional: \{\} <br /> |
+| `initialFiles` _object (keys:string, values:string)_ | InitialFiles maps filenames to their content. Each file is written<br />to the workspace directory only if it does not already exist. |  | MaxProperties: 50 <br />Optional: \{\} <br /> |
+| `initialDirectories` _string array_ | InitialDirectories is a list of directories to create (mkdir -p)<br />inside the workspace directory. Nested paths like "tools/scripts" are allowed. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
+| `additionalWorkspaces` _[AdditionalWorkspace](#additionalworkspace) array_ | AdditionalWorkspaces configures workspace files for secondary agents.<br />Each entry seeds files to ~/.openclaw/workspace-<name>/, matching the<br />workspace path configured in spec.config.raw.agents.list[].workspace. |  | MaxItems: 10 <br />Optional: \{\} <br /> |
+| `bootstrap` _[BootstrapSpec](#bootstrapspec)_ | Bootstrap controls the operator-managed BOOTSTRAP.md file injected into<br />the default workspace to guide first-run agent onboarding. |  | Optional: \{\} <br /> |
+
+

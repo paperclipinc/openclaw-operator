@@ -1,0 +1,55 @@
+processor:
+  ignoreTypes:
+    - "(.*)List$"
+    - "(.*)Status$"
+  ignoreFields:
+    - "status$"
+    - "TypeMeta$"
+
+render:
+  kubernetesVersion: 1.31
+  knownTypes:
+    - name: Quantity
+      package: k8s.io/apimachinery/pkg/api/resource
+      link: https://pkg.go.dev/k8s.io/apimachinery/pkg/api/resource#Quantity
+    - name: ObjectMeta
+      package: k8s.io/apimachinery/pkg/apis/meta/v1
+      link: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta
+    - name: LocalObjectReference
+      package: k8s.io/api/core/v1
+      link: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core
+    - name: Container
+      package: k8s.io/api/core/v1
+      link: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core
+    - name: Volume
+      package: k8s.io/api/core/v1
+      link: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core
+    - name: VolumeMount
+      package: k8s.io/api/core/v1
+      link: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core
+    - name: Toleration
+      package: k8s.io/api/core/v1
+      link: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core
+    - name: Affinity
+      package: k8s.io/api/core/v1
+      link: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core
+    - name: TopologySpreadConstraint
+      package: k8s.io/api/core/v1
+      link: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#topologyspreadconstraint-v1-core
+    - name: EnvVar
+      package: k8s.io/api/core/v1
+      link: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core
+    - name: EnvFromSource
+      package: k8s.io/api/core/v1
+      link: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envfromsource-v1-core
+    - name: PullPolicy
+      package: k8s.io/api/core/v1
+      link: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#-strong-properties-strong-container-v1-core
+    - name: NetworkPolicyEgressRule
+      package: k8s.io/api/networking/v1
+      link: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#networkpolicyegressrule-v1-networking-k8s-io
+    - name: RawExtension
+      package: k8s.io/apimachinery/pkg/runtime
+      link: https://pkg.go.dev/k8s.io/apimachinery/pkg/runtime#RawExtension
+  markdownDisabled: false
+  format: markdown

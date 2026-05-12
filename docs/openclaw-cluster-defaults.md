@@ -5,7 +5,7 @@ description: Cluster-wide defaults for OpenClawInstance fields via a singleton C
 
 # OpenClawClusterDefaults
 
-The `OpenClawClusterDefaults` is a cluster-scoped singleton that fills in unset `OpenClawInstance` fields at reconcile time. The name **must** be `cluster` -- any other name is ignored so typos do not silently churn the fleet. Per-instance fields always win, so a default only applies when the corresponding instance field is unset; defaults never get written back into the stored instance, so to introspect what will actually render look at the resulting StatefulSet or ConfigMap. The CRD's field reference lives in the [API Reference](api-reference.md#openclawclusterdefaults-v1alpha1).
+The `OpenClawClusterDefaults` is a cluster-scoped singleton that fills in unset `OpenClawInstance` fields at reconcile time. The name **must** be `cluster` -- any other name is ignored so typos do not silently churn the fleet. Per-instance fields always win, so a default only applies when the corresponding instance field is unset; defaults never get written back into the stored instance, so to introspect what will actually render look at the resulting StatefulSet or ConfigMap. The CRD's field reference lives in the [API Reference](api-reference.md#openclawclusterdefaults).
 
 ## Example
 

@@ -5,7 +5,7 @@ description: Lifecycle, server-side apply behavior, protected resources, and a u
 
 # OpenClawSelfConfig
 
-The `OpenClawSelfConfig` CRD lets a running agent request changes to its own `OpenClawInstance` spec, gated by an allowlist policy. The CRD's field reference lives in the [API Reference](api-reference.md#openclawselfconfig-v1alpha1).
+The `OpenClawSelfConfig` CRD lets a running agent request changes to its own `OpenClawInstance` spec, gated by an allowlist policy. The CRD's field reference lives in the [API Reference](api-reference.md#openclawselfconfig).
 
 ## Lifecycle
 
