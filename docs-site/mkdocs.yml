@@ -60,6 +60,11 @@ plugins:
       strict: false
   - minify:
       minify_html: true
+  - social:
+      cards: true
+      cards_layout_options:
+        background_color: "#050810"
+        color: "#ffffff"
 
 markdown_extensions:
   - admonition
