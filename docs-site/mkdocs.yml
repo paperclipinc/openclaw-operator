@@ -45,6 +45,12 @@ theme:
     repo: fontawesome/brands/github
 
 plugins:
+  - mike:
+      alias_type: redirect
+      canonical_version: latest
+      version_selector: true
+      css_dir: css
+      javascript_dir: js
   - search
   - awesome-pages
   - include-markdown
@@ -84,6 +90,10 @@ validation:
     not_found: ignore
 
 extra:
+  version:
+    provider: mike
+    default: latest
+  cname: docs-operator.openclaw.rocks
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/openclaw-rocks/openclaw-operator
