@@ -89,6 +89,7 @@ Every request is validated against the instance's allowlist policy. Protected co
 | **Extensible** | Sidecars & init containers | Chromium for browser automation, Ollama for local LLMs, Tailscale for tailnet access, plus custom init containers and sidecars |
 | **Cloud Native** | SA annotations & CA bundles | AWS IRSA / GCP Workload Identity via ServiceAccount annotations; CA bundle injection for corporate proxies |
 | **Cluster Defaults** | Singleton CR | `OpenClawClusterDefaults` (name `cluster`) fills in unset instance fields - ideal for air-gapped / China regions where every instance would otherwise duplicate the same registry + mirror env boilerplate. Per-instance fields always win. |
+| **Zombie Reaping** | Shared PID namespace | `spec.shareProcessNamespace` defaults to `true` so the pause container becomes PID 1 and reaps defunct helper processes from QMD, git, plugins, and shells - no custom init image needed |
 
 
 ## Architecture
@@ -1218,6 +1219,19 @@ spec:
   podAnnotations:
     cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
 ```
+
+### Shared Process Namespace
+
+The OpenClaw gateway runs as PID 1 in its container, and the Node.js process does not call `waitpid()` on orphaned children. Long-running pods accumulate defunct processes from QMD memory indexing, git, plugin activity, and shells. With `shareProcessNamespace: true` (the default), all containers in the pod share a PID namespace, the Kubernetes `pause` container becomes PID 1, and zombies are reaped automatically.
+
+Opt out per instance only if you need strict per-container PID isolation (and have a tini/dumb-init wrapper in your image):
+
+```yaml
+spec:
+  shareProcessNamespace: false
+```
+
+Trade-off: with sharing enabled, every container in the pod can see and signal every other container's processes. A compromised sidecar (Tailscale, Ollama, browser, custom) could send signals to the gateway and vice versa. For most deployments the zombie-reaping benefit outweighs this, but if your threat model assumes mutually distrusting sidecars, set this to `false` and reap inside your image instead.
 
 Phases: `Pending` -> `Restoring` -> `Provisioning` -> `Running` | `Updating` | `BackingUp` | `Degraded` | `Failed` | `Terminating`
 

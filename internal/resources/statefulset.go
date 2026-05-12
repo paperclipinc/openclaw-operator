@@ -76,6 +76,7 @@ func BuildStatefulSet(instance *openclawv1alpha1.OpenClawInstance, gatewayTokenS
 					ServiceAccountName:            ServiceAccountName(instance),
 					DeprecatedServiceAccount:      ServiceAccountName(instance),
 					AutomountServiceAccountToken:  Ptr(instance.Spec.SelfConfigure.Enabled || instance.Spec.Tailscale.Enabled),
+					ShareProcessNamespace:         shareProcessNamespace(instance),
 					SecurityContext:               buildPodSecurityContext(instance),
 					InitContainers:                buildInitContainers(instance, externalWorkspaceFiles, additionalExternalFiles, skillPacks),
 					Containers:                    buildContainers(instance, gwSecretName),
@@ -139,6 +140,17 @@ func buildPodAnnotations(instance *openclawv1alpha1.OpenClawInstance, externalWo
 	}
 	annotations["openclaw.rocks/config-hash"] = calculateConfigHash(instance, externalWorkspaceFiles, additionalExternalFiles)
 	return annotations
+}
+
+// shareProcessNamespace returns the effective ShareProcessNamespace value, defaulting
+// to true. The kubebuilder default would otherwise populate this at the API server,
+// but explicit handling lets existing instances stored before the field was added
+// still get the zombie-reaping behavior on the next reconcile.
+func shareProcessNamespace(instance *openclawv1alpha1.OpenClawInstance) *bool {
+	if instance.Spec.ShareProcessNamespace != nil {
+		return instance.Spec.ShareProcessNamespace
+	}
+	return Ptr(true)
 }
 
 // buildPodSecurityContext creates the pod-level security context

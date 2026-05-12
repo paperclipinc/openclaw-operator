@@ -675,6 +675,88 @@ var _ = Describe("OpenClawInstance Controller", func() {
 
 			Expect(k8sClient.Delete(ctx, instance)).Should(Succeed())
 		})
+
+		It("Should default shareProcessNamespace to true", func() {
+			instanceName := "spn-default"
+
+			if os.Getenv("E2E_SKIP_RESOURCE_VALIDATION") == "true" {
+				Skip("Skipping resource validation in minimal mode")
+			}
+
+			instance := &openclawv1alpha1.OpenClawInstance{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      instanceName,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						"openclaw.rocks/skip-backup": "true",
+					},
+				},
+				Spec: openclawv1alpha1.OpenClawInstanceSpec{
+					Image: openclawv1alpha1.ImageSpec{
+						Repository: "ghcr.io/openclaw/openclaw",
+						Tag:        "latest",
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
+
+			statefulSet := &appsv1.StatefulSet{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, types.NamespacedName{
+					Name:      instanceName,
+					Namespace: namespace,
+				}, statefulSet)
+			}, timeout, interval).Should(Succeed())
+
+			Expect(statefulSet.Spec.Template.Spec.ShareProcessNamespace).ToNot(BeNil(),
+				"ShareProcessNamespace should be set so the pause container reaps zombies")
+			Expect(*statefulSet.Spec.Template.Spec.ShareProcessNamespace).To(BeTrue(),
+				"ShareProcessNamespace should default to true")
+
+			Expect(k8sClient.Delete(ctx, instance)).Should(Succeed())
+		})
+
+		It("Should honor shareProcessNamespace=false override", func() {
+			instanceName := "spn-disabled"
+
+			if os.Getenv("E2E_SKIP_RESOURCE_VALIDATION") == "true" {
+				Skip("Skipping resource validation in minimal mode")
+			}
+
+			instance := &openclawv1alpha1.OpenClawInstance{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      instanceName,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						"openclaw.rocks/skip-backup": "true",
+					},
+				},
+				Spec: openclawv1alpha1.OpenClawInstanceSpec{
+					Image: openclawv1alpha1.ImageSpec{
+						Repository: "ghcr.io/openclaw/openclaw",
+						Tag:        "latest",
+					},
+					ShareProcessNamespace: resources.Ptr(false),
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
+
+			statefulSet := &appsv1.StatefulSet{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, types.NamespacedName{
+					Name:      instanceName,
+					Namespace: namespace,
+				}, statefulSet)
+			}, timeout, interval).Should(Succeed())
+
+			Expect(statefulSet.Spec.Template.Spec.ShareProcessNamespace).ToNot(BeNil())
+			Expect(*statefulSet.Spec.Template.Spec.ShareProcessNamespace).To(BeFalse(),
+				"ShareProcessNamespace should be false when explicitly disabled")
+
+			Expect(k8sClient.Delete(ctx, instance)).Should(Succeed())
+		})
 	})
 
 	Context("When deleting an OpenClawInstance without S3 backup credentials", func() {

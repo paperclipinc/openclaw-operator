@@ -67,6 +67,21 @@ type OpenClawInstanceSpec struct {
 	// +optional
 	Security SecuritySpec `json:"security,omitempty"`
 
+	// ShareProcessNamespace enables PID namespace sharing between all containers
+	// in the pod. When true, the infrastructure (pause) container becomes PID 1
+	// and reaps zombie processes, which prevents accumulation of defunct helper
+	// processes (git, plugins, QMD memory, shells) under a Node.js gateway that
+	// does not call waitpid(). Defaults to true.
+	//
+	// Security note: enabling this lets every container in the pod see and signal
+	// every other container's processes. A compromised sidecar (Tailscale, Ollama,
+	// browser, custom) could send signals to the gateway and vice versa. Set to
+	// false to keep per-container PID isolation; you are then responsible for
+	// reaping zombies (e.g. by baking tini or dumb-init into the image).
+	// +kubebuilder:default=true
+	// +optional
+	ShareProcessNamespace *bool `json:"shareProcessNamespace,omitempty"`
+
 	// Storage specifies persistent storage configuration
 	// +optional
 	Storage StorageSpec `json:"storage,omitempty"`

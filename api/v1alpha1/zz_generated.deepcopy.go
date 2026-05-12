@@ -1073,6 +1073,11 @@ func (in *OpenClawInstanceSpec) DeepCopyInto(out *OpenClawInstanceSpec) {
 	}
 	out.Resources = in.Resources
 	in.Security.DeepCopyInto(&out.Security)
+	if in.ShareProcessNamespace != nil {
+		in, out := &in.ShareProcessNamespace, &out.ShareProcessNamespace
+		*out = new(bool)
+		**out = **in
+	}
 	in.Storage.DeepCopyInto(&out.Storage)
 	in.Chromium.DeepCopyInto(&out.Chromium)
 	in.Tailscale.DeepCopyInto(&out.Tailscale)
