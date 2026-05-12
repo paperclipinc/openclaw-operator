@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.0](https://github.com/openclaw-rocks/openclaw-operator/compare/v0.33.0...v0.34.0) (2026-05-12)
+
+
+### Features
+
+* docs site at openclaw.rocks/docs/operator/ ([#488](https://github.com/openclaw-rocks/openclaw-operator/issues/488)) ([0a6aa43](https://github.com/openclaw-rocks/openclaw-operator/commit/0a6aa43f2c4c88367cadbc0de2e11905f69b272b))
+
 ## [0.33.0](https://github.com/openclaw-rocks/openclaw-operator/compare/v0.32.1...v0.33.0) (2026-05-12)
 
 
