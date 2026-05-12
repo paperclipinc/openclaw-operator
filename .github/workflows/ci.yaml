@@ -71,6 +71,56 @@ jobs:
       - name: Check Helm chart CRD templates match generated CRDs
         run: bash hack/sync-chart-crds.sh --check
 
+  docs-build:
+    name: Docs Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: docs-site/requirements.txt
+
+      - name: Install Cairo (Material social plugin dep)
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev libfreetype6-dev
+
+      - name: Install docs deps
+        run: pip install -r docs-site/requirements.txt
+
+      - name: Build docs site (strict)
+        run: mkdocs build --strict -f docs-site/mkdocs.yml
+
+      - name: Upload built site as artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-preview-${{ github.event.pull_request.number }}
+          path: docs-site/site/
+          retention-days: 7
+
+  api-docs-sync:
+    name: API Docs Sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Regenerate api-reference.md
+        run: make api-docs
+
+      - name: Verify no drift
+        run: |
+          if ! git diff --exit-code docs/api-reference.md; then
+            echo "::error::docs/api-reference.md is out of sync with CRD types."
+            echo "::error::Run 'make api-docs' locally and commit the result."
+            exit 1
+          fi
+
   test:
     name: Test
     runs-on: ubuntu-latest
