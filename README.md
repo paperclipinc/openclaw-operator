@@ -527,8 +527,17 @@ Install plugins declaratively. The operator runs a dedicated init container that
 spec:
   plugins:
     - "@martian-engineering/lossless-claw"
+    - "@xquik/tweetclaw"
     - "some-other-plugin"
 ```
+
+Use `@xquik/tweetclaw` when an OpenClaw instance needs structured X/Twitter
+automation from a packaged plugin: search tweets, search tweet replies, export
+followers, look up users, monitor tweets, deliver webhooks, capture giveaway
+data, and keep post/reply actions approval-gated. Install the plugin through
+`spec.plugins`, then configure its OpenClaw plugin settings through your normal
+credential-handling workflow. Do not place X/Twitter access material in
+Git-tracked manifests.
 
 This is the layout the OpenClaw gateway's plugin discovery expects - it scans direct subdirectories of `~/.openclaw/extensions/` for plugin manifests and skips `node_modules/` entirely. Each install is staged via `npm pack`, populated with its runtime dependencies via `npm install --omit=dev`, and atomically renamed into place so a partial install is never visible to the gateway.
 
