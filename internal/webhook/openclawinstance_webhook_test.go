@@ -1591,6 +1591,182 @@ func TestValidateCreate_JSON5_SkipsConfigSchemaValidation(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// forcePaths validation tests
+// ---------------------------------------------------------------------------
+
+func TestValidateCreate_ForcePaths_ValidWithMerge(t *testing.T) {
+	v := &OpenClawInstanceValidator{}
+	instance := newTestInstance()
+	instance.Spec.Config.MergeMode = "merge"
+	instance.Spec.Config.ForcePaths = []string{
+		"gateway",
+		"models.providers",
+		"agents.defaults.sandbox",
+		"agents.defaults.model.primary",
+	}
+
+	_, err := v.ValidateCreate(context.Background(), instance)
+	if err != nil {
+		t.Fatalf("expected no error for valid forcePaths under mergeMode=merge, got: %v", err)
+	}
+}
+
+func TestValidateCreate_ForcePaths_EmptyAllowed(t *testing.T) {
+	// An empty / unset forcePaths must not trip the mergeMode check —
+	// otherwise the field becomes effectively mandatory under overwrite,
+	// which would be a breaking change for every existing CR.
+	v := &OpenClawInstanceValidator{}
+	instance := newTestInstance()
+	instance.Spec.Config.MergeMode = "overwrite"
+	instance.Spec.Config.ForcePaths = nil
+
+	_, err := v.ValidateCreate(context.Background(), instance)
+	if err != nil {
+		t.Fatalf("expected no error for empty forcePaths under overwrite mode, got: %v", err)
+	}
+
+	instance.Spec.Config.ForcePaths = []string{}
+	if _, err := v.ValidateCreate(context.Background(), instance); err != nil {
+		t.Fatalf("expected no error for zero-length forcePaths slice under overwrite mode, got: %v", err)
+	}
+}
+
+func TestValidateCreate_ForcePaths_RequiresMerge(t *testing.T) {
+	// Under overwrite mode the whole file is rebuilt every restart, so
+	// forcePaths is meaningless. Reject rather than silently ignore — the
+	// user almost certainly didn't mean to set it.
+	v := &OpenClawInstanceValidator{}
+	instance := newTestInstance()
+	instance.Spec.Config.MergeMode = "overwrite"
+	instance.Spec.Config.ForcePaths = []string{"gateway"}
+
+	_, err := v.ValidateCreate(context.Background(), instance)
+	if err == nil {
+		t.Fatal("expected error for forcePaths under mergeMode=overwrite")
+	}
+	if !strings.Contains(err.Error(), "forcePaths") || !strings.Contains(err.Error(), "merge") {
+		t.Fatalf("error should mention forcePaths and merge, got: %v", err)
+	}
+}
+
+func TestValidateCreate_ForcePaths_RequiresMergeMode_DefaultedOverwrite(t *testing.T) {
+	// The defaulter normally fills MergeMode="overwrite", but ValidateCreate
+	// is exercised directly in unit tests so the field may be empty. Treat
+	// an empty mergeMode as "not merge" — the defaulter's contract is that
+	// empty means overwrite.
+	v := &OpenClawInstanceValidator{}
+	instance := newTestInstance()
+	instance.Spec.Config.MergeMode = ""
+	instance.Spec.Config.ForcePaths = []string{"gateway"}
+
+	_, err := v.ValidateCreate(context.Background(), instance)
+	if err == nil {
+		t.Fatal("expected error for forcePaths with empty mergeMode (treated as overwrite)")
+	}
+	if !strings.Contains(err.Error(), "forcePaths") {
+		t.Fatalf("error should mention forcePaths, got: %v", err)
+	}
+}
+
+func TestValidateCreate_ForcePaths_InvalidEntries(t *testing.T) {
+	// Table of malformed paths. Every entry must be rejected with an error
+	// that mentions both the field path ("forcePaths") and a hint about the
+	// specific violation.
+	cases := []struct {
+		name   string
+		path   string
+		errSub string
+	}{
+		{"empty string", "", "empty"},
+		{"leading dot", ".gateway", "start or end"},
+		{"trailing dot", "gateway.", "start or end"},
+		{"double dot", "models..providers", "empty segments"},
+		{"triple dot", "a...b", "empty segments"},
+		{"contains space", "gateway providers", "invalid character"}, // space is not in [a-zA-Z0-9._-]
+		{"contains slash", "gateway/providers", "invalid character"},
+		{"contains backslash", `gateway\providers`, "invalid character"},
+		{"contains bracket", "gateway[0]", "invalid character"},
+		{"contains quote", `gateway."x"`, "invalid character"},
+		{"contains dollar", "gateway.$x", "invalid character"},
+	}
+
+	v := &OpenClawInstanceValidator{}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			instance := newTestInstance()
+			instance.Spec.Config.MergeMode = "merge"
+			instance.Spec.Config.ForcePaths = []string{tc.path}
+
+			_, err := v.ValidateCreate(context.Background(), instance)
+			if err == nil {
+				t.Fatalf("expected error for path %q, got nil", tc.path)
+			}
+			if !strings.Contains(err.Error(), "forcePaths") {
+				t.Errorf("error should mention forcePaths, got: %v", err)
+			}
+			if tc.errSub != "" && !strings.Contains(err.Error(), tc.errSub) {
+				t.Errorf("error for path %q should contain %q, got: %v", tc.path, tc.errSub, err)
+			}
+		})
+	}
+}
+
+func TestValidateCreate_ForcePaths_ValidEntries(t *testing.T) {
+	// Table of paths that must be accepted under mergeMode=merge.
+	cases := []string{
+		"gateway",
+		"a",
+		"a.b",
+		"a.b.c.d.e.f.g.h.i.j", // arbitrary depth
+		"models.providers",
+		"models.providers.openai-compat", // dash
+		"agents.defaults.model_primary",  // underscore
+		"a1.b2.c3",                       // digits
+		"UPPER.case",                     // uppercase
+		"Mixed-Case_With.dots",
+	}
+
+	v := &OpenClawInstanceValidator{}
+	for _, p := range cases {
+		t.Run(p, func(t *testing.T) {
+			instance := newTestInstance()
+			instance.Spec.Config.MergeMode = "merge"
+			instance.Spec.Config.ForcePaths = []string{p}
+
+			_, err := v.ValidateCreate(context.Background(), instance)
+			if err != nil {
+				t.Fatalf("expected no error for path %q, got: %v", p, err)
+			}
+		})
+	}
+}
+
+func TestValidateCreate_ForcePaths_ReportsBadEntryIndex(t *testing.T) {
+	// When multiple paths are supplied, the error message should make it
+	// obvious which one is bad. The first invalid entry wins.
+	v := &OpenClawInstanceValidator{}
+	instance := newTestInstance()
+	instance.Spec.Config.MergeMode = "merge"
+	instance.Spec.Config.ForcePaths = []string{
+		"gateway",          // ok
+		"models.providers", // ok
+		"bad..path",        // bad — index 2
+		"agents",           // never reached
+	}
+
+	_, err := v.ValidateCreate(context.Background(), instance)
+	if err == nil {
+		t.Fatal("expected error for entry with empty segments")
+	}
+	if !strings.Contains(err.Error(), "[2]") {
+		t.Errorf("error should identify the bad index [2], got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "bad..path") {
+		t.Errorf("error should quote the offending path, got: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Web terminal validation tests
 // ---------------------------------------------------------------------------
 

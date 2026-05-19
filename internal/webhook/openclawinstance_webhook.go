@@ -37,6 +37,7 @@ import (
 
 const imageTagLatest = "latest"
 const configFormatJSON5 = "json5"
+const configMergeModeMerge = "merge"
 
 // workspaceNameRegex matches the kubebuilder validation pattern for workspace names.
 // Requires lowercase alphanumeric, optionally followed by hyphen-separated segments.
@@ -269,9 +270,14 @@ func (v *OpenClawInstanceValidator) validate(instance *openclawv1alpha1.OpenClaw
 		if instance.Spec.Config.Raw != nil {
 			return nil, fmt.Errorf("config.format \"json5\" requires configMapRef — inline raw config must be valid JSON")
 		}
-		if instance.Spec.Config.MergeMode == "merge" {
+		if instance.Spec.Config.MergeMode == configMergeModeMerge {
 			return nil, fmt.Errorf("config.format \"json5\" is not compatible with mergeMode \"merge\"")
 		}
+	}
+
+	// 20b. Validate forcePaths constraints
+	if err := validateForcePaths(instance); err != nil {
+		return nil, err
 	}
 
 	// 18. Validate auto-update healthCheckTimeout
@@ -550,6 +556,39 @@ func validateConfigSchema(instance *openclawv1alpha1.OpenClawInstance) admission
 		}
 	}
 	return warnings
+}
+
+// validateForcePaths checks that spec.config.forcePaths is only used with
+// mergeMode=merge and that each entry is a well-formed dot-path. Under
+// mergeMode=overwrite the whole config file is rebuilt on every restart,
+// so forcePaths is redundant — we reject it as a likely misconfiguration
+// rather than silently ignoring it.
+func validateForcePaths(instance *openclawv1alpha1.OpenClawInstance) error {
+	paths := instance.Spec.Config.ForcePaths
+	if len(paths) == 0 {
+		return nil
+	}
+	if instance.Spec.Config.MergeMode != configMergeModeMerge {
+		return fmt.Errorf("config.forcePaths is only valid when config.mergeMode is \"merge\" (got %q)", instance.Spec.Config.MergeMode)
+	}
+	for i, p := range paths {
+		if p == "" {
+			return fmt.Errorf("config.forcePaths[%d]: path must not be empty", i)
+		}
+		if strings.HasPrefix(p, ".") || strings.HasSuffix(p, ".") {
+			return fmt.Errorf("config.forcePaths[%d] %q: path must not start or end with '.'", i, p)
+		}
+		if strings.Contains(p, "..") {
+			return fmt.Errorf("config.forcePaths[%d] %q: path must not contain empty segments", i, p)
+		}
+		for _, c := range p {
+			if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+				c == '-' || c == '_' || c == '.') {
+				return fmt.Errorf("config.forcePaths[%d] %q: contains invalid character %q (allowed: alphanumeric, '-', '_', '.')", i, p, string(c))
+			}
+		}
+	}
+	return nil
 }
 
 // reservedInitContainerNames are names used by operator-managed init containers.
