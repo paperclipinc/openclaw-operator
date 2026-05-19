@@ -5667,6 +5667,79 @@ func TestBuildInitScript_MergeMode_NoConfig(t *testing.T) {
 	}
 }
 
+func TestBuildInitScript_MergeMode_NoForcePaths(t *testing.T) {
+	// When forcePaths is unset, the __forcepaths env must still be a valid
+	// empty JSON array so the merge script's JSON.parse doesn't blow up.
+	instance := newTestInstance("merge-no-fp")
+	instance.Spec.Config.Raw = &openclawv1alpha1.RawConfig{
+		RawExtension: runtime.RawExtension{Raw: []byte(`{}`)},
+	}
+	instance.Spec.Config.MergeMode = ConfigMergeModeMerge
+
+	script := BuildInitScript(instance, nil, nil, nil)
+	if !strings.Contains(script, `__forcepaths='[]'`) {
+		t.Errorf("merge mode with no forcePaths should set __forcepaths='[]', got: %q", script)
+	}
+	// Delete-by-path helper must still be present so the merge script is
+	// structurally identical regardless of whether forcePaths is empty.
+	if !strings.Contains(script, "function dp(o,p)") {
+		t.Errorf("merge script must define dp() even when forcePaths is empty, got: %q", script)
+	}
+}
+
+func TestBuildInitScript_MergeMode_WithForcePaths(t *testing.T) {
+	instance := newTestInstance("merge-fp")
+	instance.Spec.Config.Raw = &openclawv1alpha1.RawConfig{
+		RawExtension: runtime.RawExtension{Raw: []byte(`{}`)},
+	}
+	instance.Spec.Config.MergeMode = ConfigMergeModeMerge
+	instance.Spec.Config.ForcePaths = []string{"gateway", "models.providers", "agents.defaults.sandbox"}
+
+	script := BuildInitScript(instance, nil, nil, nil)
+	// Each path must appear inside the JSON-encoded env var, in order.
+	wantEnv := `__forcepaths='["gateway","models.providers","agents.defaults.sandbox"]'`
+	if !strings.Contains(script, wantEnv) {
+		t.Errorf("merge script missing forcePaths env, want it to contain %q\ngot: %s", wantEnv, script)
+	}
+	// The deletion loop must precede the deep merge — otherwise a
+	// force-deleted subtree could be re-merged in from the existing PVC
+	// config before being overwritten, leaving stale partial state.
+	dpLoop := "for(const p of fp)dp(base,p);"
+	mergeCall := "dm(base,inc)"
+	dpIdx := strings.Index(script, dpLoop)
+	mergeIdx := strings.Index(script, mergeCall)
+	if dpIdx == -1 {
+		t.Fatalf("merge script missing forcePaths deletion loop, got: %s", script)
+	}
+	if mergeIdx == -1 {
+		t.Fatalf("merge script missing deep-merge call, got: %s", script)
+	}
+	if dpIdx >= mergeIdx {
+		t.Errorf("forcePaths deletion loop must run before deep merge (dp at %d, dm at %d)", dpIdx, mergeIdx)
+	}
+}
+
+func TestBuildInitScript_OverwriteMode_IgnoresForcePaths(t *testing.T) {
+	// Under overwrite mode, forcePaths is rejected by the webhook — but if
+	// it leaks through (e.g. an older webhook deployment) the script
+	// generator must still produce a valid overwrite script and never embed
+	// the forcePaths machinery, because there is no merge to apply them to.
+	instance := newTestInstance("ow-with-fp")
+	instance.Spec.Config.Raw = &openclawv1alpha1.RawConfig{
+		RawExtension: runtime.RawExtension{Raw: []byte(`{}`)},
+	}
+	instance.Spec.Config.MergeMode = "overwrite"
+	instance.Spec.Config.ForcePaths = []string{"gateway"}
+
+	script := BuildInitScript(instance, nil, nil, nil)
+	if !strings.Contains(script, "cp /config/") {
+		t.Errorf("overwrite mode should use cp, got: %q", script)
+	}
+	if strings.Contains(script, "__forcepaths") {
+		t.Errorf("overwrite mode must not embed __forcepaths env var, got: %q", script)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Feature 3: Declarative skill installation tests
 // ---------------------------------------------------------------------------

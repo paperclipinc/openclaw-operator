@@ -685,6 +685,27 @@ func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }
 
+// forcePathsJSON returns spec.config.forcePaths as a compact JSON array
+// string suitable for injection via the __forcepaths env var. Always returns
+// a valid JSON array, including "[]" when unset — the merge script's
+// JSON.parse expects valid input either way.
+func forcePathsJSON(instance *openclawv1alpha1.OpenClawInstance) string {
+	paths := instance.Spec.Config.ForcePaths
+	if len(paths) == 0 {
+		return "[]"
+	}
+	// json.Marshal of a []string is guaranteed to produce a JSON array
+	// with no characters that need shell escaping beyond what shellQuote
+	// already handles.
+	b, err := json.Marshal(paths)
+	if err != nil {
+		// Unreachable: []string is always marshalable. Fall back to an
+		// empty list so the init script doesn't fail.
+		return "[]"
+	}
+	return string(b)
+}
+
 // BuildInitScript generates the shell script for the init container.
 // It handles config copy or merge, directory creation (idempotent),
 // workspace file seeding (only if not present), and skill pack file mapping.
@@ -700,17 +721,29 @@ func BuildInitScript(instance *openclawv1alpha1.OpenClawInstance, externalWorksp
 			// Uses the OpenClaw image (has Node.js + sh); the jq distroless image
 			// cannot be used because it has no shell (#105).
 			// The config path is passed via env var to avoid shell/JS quoting issues.
+			//
+			// When spec.config.forcePaths is non-empty, each listed dot-path is
+			// deleted from the PVC config before the deep merge — so the
+			// final value at that path is whatever the CR's raw config supplies,
+			// not whatever the agent persisted on disk. This is the
+			// tenant-isolation lever for managed multi-tenant deployments: it
+			// lets channels.* (user-owned) survive restarts while keeping
+			// gateway.*, models.providers.*, etc rebuilt from the CR.
 			lines = append(lines, fmt.Sprintf(
-				`__cfgpath=/config/%s node -e '`+
+				`__cfgpath=/config/%s __forcepaths=%s node -e '`+
 					`const fs=require("fs");`+
 					`function dm(a,b){const r={...a};for(const k in b){r[k]=b[k]&&typeof b[k]==="object"&&!Array.isArray(b[k])&&r[k]&&typeof r[k]==="object"&&!Array.isArray(r[k])?dm(r[k],b[k]):b[k]}return r}`+
+					`function dp(o,p){const k=p.split(".");let c=o;for(let i=0;i<k.length-1;i++){if(!c[k[i]]||typeof c[k[i]]!=="object")return;c=c[k[i]]}delete c[k[k.length-1]]}`+
 					`const e="/data/openclaw.json",c=process.env.__cfgpath,t="/tmp/merged.json";`+
 					`const base=fs.existsSync(e)?JSON.parse(fs.readFileSync(e,"utf8")):{};`+
+					`const fp=JSON.parse(process.env.__forcepaths);`+
+					`for(const p of fp)dp(base,p);`+
 					`const inc=JSON.parse(fs.readFileSync(c,"utf8"));`+
 					`fs.writeFileSync(t,JSON.stringify(dm(base,inc),null,2));`+
 					`fs.copyFileSync(t,e);`+
 					`'`,
-				shellQuote(key)))
+				shellQuote(key),
+				shellQuote(forcePathsJSON(instance))))
 		case instance.Spec.Config.Format == ConfigFormatJSON5:
 			// JSON5 overwrite — convert to standard JSON via npx json5
 			lines = append(lines, fmt.Sprintf(
@@ -2607,16 +2640,23 @@ func buildConfigRestoreCommand(instance *openclawv1alpha1.OpenClawInstance) stri
 	case instance.Spec.Config.MergeMode == ConfigMergeModeMerge:
 		// Deep-merge operator config into existing PVC config via Node.js.
 		// Same logic as the init container merge, but with main container paths.
+		// forcePaths handling must match the init script — otherwise an
+		// attacker could persist a rogue subtree across a container restart
+		// (which does not re-run init containers) and bypass tenant isolation.
 		return fmt.Sprintf(
-			`node -e '`+
+			`__forcepaths=%s node -e '`+
 				`const fs=require("fs");`+
 				`function dm(a,b){const r={...a};for(const k in b){r[k]=b[k]&&typeof b[k]==="object"&&!Array.isArray(b[k])&&r[k]&&typeof r[k]==="object"&&!Array.isArray(r[k])?dm(r[k],b[k]):b[k]}return r}`+
+				`function dp(o,p){const k=p.split(".");let c=o;for(let i=0;i<k.length-1;i++){if(!c[k[i]]||typeof c[k[i]]!=="object")return;c=c[k[i]]}delete c[k[k.length-1]]}`+
 				`const e="%s",c="%s",t="/tmp/merged.json";`+
 				`const base=fs.existsSync(e)?JSON.parse(fs.readFileSync(e,"utf8")):{};`+
+				`const fp=JSON.parse(process.env.__forcepaths);`+
+				`for(const p of fp)dp(base,p);`+
 				`const inc=JSON.parse(fs.readFileSync(c,"utf8"));`+
 				`fs.writeFileSync(t,JSON.stringify(dm(base,inc),null,2));`+
 				`fs.copyFileSync(t,e);`+
 				`'`,
+			shellQuote(forcePathsJSON(instance)),
 			dst, src)
 	case instance.Spec.Config.Format == ConfigFormatJSON5:
 		// JSON5 conversion requires npx which is too slow for a postStart hook.

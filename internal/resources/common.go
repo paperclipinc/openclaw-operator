@@ -82,6 +82,9 @@ const (
 	// ConfigMergeModeMerge is the merge mode that deep-merges config with existing PVC config
 	ConfigMergeModeMerge = "merge"
 
+	// ConfigMergeModeOverwrite replaces the config file from CR.raw on every pod restart.
+	ConfigMergeModeOverwrite = "overwrite"
+
 	// ConfigFormatJSON5 is the config format that accepts JSON5 (comments, trailing commas)
 	ConfigFormatJSON5 = "json5"
 
