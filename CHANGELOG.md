@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.2](https://github.com/openclaw-rocks/openclaw-operator/compare/v0.34.1...v0.34.2) (2026-05-20)
+
+
+### Bug Fixes
+
+* **config:** inject gateway.mode=local for openclaw &gt;= v2026.5.18 ([#502](https://github.com/openclaw-rocks/openclaw-operator/issues/502)) ([e114ce7](https://github.com/openclaw-rocks/openclaw-operator/commit/e114ce7291d4798e444e2a0ac18bbf30e50d5cae))
+
 ## [0.34.1](https://github.com/openclaw-rocks/openclaw-operator/compare/v0.34.0...v0.34.1) (2026-05-12)
 
 
