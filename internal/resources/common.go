@@ -148,6 +148,13 @@ const (
 	// is no "all" keyword, so a raw IP is required here.
 	GatewayBindAllInterfaces = "0.0.0.0"
 
+	// GatewayModeLocal is the gateway.mode value the operator injects. Since
+	// v2026.5.18 the upstream openclaw binary refuses to start unless
+	// gateway.mode is set, treating its absence as "suspicious or clobbered
+	// config". The operator always runs the gateway in-cluster (no remote
+	// onboarding), so "local" is the correct mode.
+	GatewayModeLocal = "local"
+
 	// DefaultHandshakeTimeoutMs is the WebSocket handshake timeout injected
 	// into gateway.handshakeTimeoutMs. OpenClaw v2026.3.12 reduced the
 	// hardcoded default from ~10s to 3s as a security measure, but 3s is too

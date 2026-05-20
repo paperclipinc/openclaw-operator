@@ -2193,6 +2193,54 @@ func TestBuildConfigMap_InvalidJSON_RawPreserved(t *testing.T) {
 	}
 }
 
+// TestBuildConfigMap_InjectsGatewayMode verifies the operator sets
+// gateway.mode=local on a default instance. Upstream openclaw >= v2026.5.18
+// refuses to start without this field.
+func TestBuildConfigMap_InjectsGatewayMode(t *testing.T) {
+	instance := newTestInstance("cm-gateway-mode")
+
+	cm := BuildConfigMap(instance, "tok", nil)
+	content := cm.Data["openclaw.json"]
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+		t.Fatalf("failed to parse config: %v", err)
+	}
+	gw, ok := parsed["gateway"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected gateway key after enrichment")
+	}
+	if gw["mode"] != "local" {
+		t.Errorf("gateway.mode = %v, want %q", gw["mode"], "local")
+	}
+}
+
+// TestBuildConfigMap_PreservesUserGatewayMode verifies the operator does not
+// overwrite a gateway.mode that the user has explicitly set.
+func TestBuildConfigMap_PreservesUserGatewayMode(t *testing.T) {
+	instance := newTestInstance("cm-gateway-mode-user")
+	instance.Spec.Config.Raw = &openclawv1alpha1.RawConfig{
+		RawExtension: runtime.RawExtension{
+			Raw: []byte(`{"gateway":{"mode":"remote"}}`),
+		},
+	}
+
+	cm := BuildConfigMap(instance, "tok", nil)
+	content := cm.Data["openclaw.json"]
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+		t.Fatalf("failed to parse config: %v", err)
+	}
+	gw, ok := parsed["gateway"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected gateway key after enrichment")
+	}
+	if gw["mode"] != "remote" {
+		t.Errorf("gateway.mode = %v, want %q (user override should win)", gw["mode"], "remote")
+	}
+}
+
 // ---------------------------------------------------------------------------
 // BuildConfigMapFromBytes tests
 // ---------------------------------------------------------------------------
