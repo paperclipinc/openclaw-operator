@@ -55,7 +55,10 @@ func BuildConfigMapFromBytes(instance *openclawv1alpha1.OpenClawInstance, baseCo
 		configBytes = []byte("{}")
 	}
 
-	// Enrichment pipeline: OTel metrics -> gateway auth -> device auth -> tailscale -> browser -> gateway bind -> trusted proxies -> control UI origins -> skill packs
+	// Enrichment pipeline: gateway mode -> OTel metrics -> gateway auth -> device auth -> tailscale -> browser -> gateway bind -> trusted proxies -> control UI origins -> skill packs
+	if enriched, err := enrichConfigWithGatewayMode(configBytes); err == nil {
+		configBytes = enriched
+	}
 	if IsMetricsEnabled(instance) {
 		if enriched, err := enrichConfigWithOTelMetrics(configBytes); err == nil {
 			configBytes = enriched
@@ -459,6 +462,33 @@ func enrichConfigWithBrowser(configJSON []byte) ([]byte, error) {
 
 	browser["profiles"] = profiles
 	config["browser"] = browser
+
+	return json.Marshal(config)
+}
+
+// enrichConfigWithGatewayMode injects gateway.mode=local into the config JSON.
+// Upstream openclaw (>= v2026.5.18) refuses to start without this field,
+// emitting "Gateway start blocked: existing config is missing gateway.mode".
+// The operator always deploys the gateway in-cluster, so "local" is the
+// correct mode. If the user has already set gateway.mode, the config is
+// returned unchanged (user override wins).
+func enrichConfigWithGatewayMode(configJSON []byte) ([]byte, error) {
+	var config map[string]interface{}
+	if err := json.Unmarshal(configJSON, &config); err != nil {
+		return configJSON, nil // not a JSON object, return unchanged
+	}
+
+	gw, _ := config["gateway"].(map[string]interface{})
+	if gw == nil {
+		gw = make(map[string]interface{})
+	}
+
+	if _, ok := gw["mode"]; ok {
+		return configJSON, nil
+	}
+
+	gw["mode"] = GatewayModeLocal
+	config["gateway"] = gw
 
 	return json.Marshal(config)
 }
