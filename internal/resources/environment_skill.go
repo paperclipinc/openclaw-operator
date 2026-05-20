@@ -36,6 +36,17 @@ You run in a hardened Kubernetes pod. The root filesystem is read-only.
 
 Everything else is read-only. Do NOT attempt writing to system paths.
 
+## OpenClaw CLI
+
+The ` + "`openclaw`" + ` command is available on your PATH (symlinked to /app/openclaw.mjs).
+Use it directly - you do NOT need to invoke node manually.
+
+` + "```" + `bash
+openclaw --help        # list commands
+openclaw doctor        # run healthchecks
+openclaw --version
+` + "```" + `
+
 ## Installing packages
 
 uv is pre-installed at ~/.local/bin/uv and already in your PATH.
