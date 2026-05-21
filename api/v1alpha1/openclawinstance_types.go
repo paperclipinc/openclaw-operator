@@ -41,9 +41,13 @@ type OpenClawInstanceSpec struct {
 	Skills []string `json:"skills,omitempty"`
 
 	// Plugins is a list of plugins to install via init container.
-	// Each entry is an npm package name (e.g., "@martian-engineering/lossless-claw").
-	// An optional "npm:" prefix is accepted and stripped before installation.
-	// npm lifecycle scripts are disabled for security.
+	// Each entry is an npm package name (e.g., "@openclaw/matrix" or
+	// "@martian-engineering/lossless-claw"). An optional "npm:" prefix is
+	// accepted and stripped before installation.
+	// Installation goes through the OpenClaw CLI's ClawHub installer
+	// ("openclaw plugins install clawhub:<pkg>") rather than raw npm install
+	// so packages published with workspace:* dependency markers resolve
+	// correctly. npm lifecycle scripts are disabled for security.
 	// +kubebuilder:validation:MaxItems=20
 	// +optional
 	Plugins []string `json:"plugins,omitempty"`
