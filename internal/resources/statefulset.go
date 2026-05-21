@@ -1157,8 +1157,8 @@ func buildPluginsInitContainer(instance *openclawv1alpha1.OpenClawInstance) *cor
 
 	// Append user-supplied env vars after hardcoded defaults so that
 	// credentials are available during plugin installation.
-	// Hardcoded vars (HOME, NPM_CONFIG_CACHE, NPM_CONFIG_IGNORE_SCRIPTS)
-	// take precedence because they appear first.
+	// Hardcoded vars (HOME, NPM_CONFIG_PREFIX, NPM_CONFIG_CACHE,
+	// NPM_CONFIG_IGNORE_SCRIPTS) take precedence because they appear first.
 	env = append(env, instance.Spec.Env...)
 
 	return &corev1.Container{
