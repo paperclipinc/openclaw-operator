@@ -6317,7 +6317,7 @@ func TestBuildStatefulSet_SkillsOnly_HasBothInitContainers(t *testing.T) {
 
 func TestParsePluginEntry_Basic(t *testing.T) {
 	got := parsePluginEntry("@martian-engineering/lossless-claw")
-	want := "_install_plugin '@martian-engineering/lossless-claw' 'lossless-claw'"
+	want := "openclaw plugins install 'clawhub:@martian-engineering/lossless-claw'"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -6325,7 +6325,7 @@ func TestParsePluginEntry_Basic(t *testing.T) {
 
 func TestParsePluginEntry_WithNpmPrefix(t *testing.T) {
 	got := parsePluginEntry("npm:@openclaw/some-plugin")
-	want := "_install_plugin '@openclaw/some-plugin' 'some-plugin'"
+	want := "openclaw plugins install 'clawhub:@openclaw/some-plugin'"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -6333,7 +6333,7 @@ func TestParsePluginEntry_WithNpmPrefix(t *testing.T) {
 
 func TestParsePluginEntry_Unscoped(t *testing.T) {
 	got := parsePluginEntry("some-plugin")
-	want := "_install_plugin 'some-plugin' 'some-plugin'"
+	want := "openclaw plugins install 'clawhub:some-plugin'"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -6343,31 +6343,13 @@ func TestParsePluginEntry_Versioned(t *testing.T) {
 	cases := []struct {
 		entry, want string
 	}{
-		{"brave-plugin@1.2.3", "_install_plugin 'brave-plugin@1.2.3' 'brave-plugin'"},
-		{"@openclaw/brave-plugin@1.2.3", "_install_plugin '@openclaw/brave-plugin@1.2.3' 'brave-plugin'"},
-		{"npm:@openclaw/brave-plugin@1.2.3", "_install_plugin '@openclaw/brave-plugin@1.2.3' 'brave-plugin'"},
+		{"brave-plugin@1.2.3", "openclaw plugins install 'clawhub:brave-plugin@1.2.3'"},
+		{"@openclaw/brave-plugin@1.2.3", "openclaw plugins install 'clawhub:@openclaw/brave-plugin@1.2.3'"},
+		{"npm:@openclaw/brave-plugin@1.2.3", "openclaw plugins install 'clawhub:@openclaw/brave-plugin@1.2.3'"},
 	}
 	for _, c := range cases {
 		if got := parsePluginEntry(c.entry); got != c.want {
 			t.Errorf("parsePluginEntry(%q) = %q, want %q", c.entry, got, c.want)
-		}
-	}
-}
-
-func TestPluginDirName(t *testing.T) {
-	cases := []struct {
-		spec, want string
-	}{
-		{"brave-plugin", "brave-plugin"},
-		{"@openclaw/brave-plugin", "brave-plugin"},
-		{"brave-plugin@1.2.3", "brave-plugin"},
-		{"@openclaw/brave-plugin@1.2.3", "brave-plugin"},
-		{"npm:@openclaw/brave-plugin@1.2.3", "brave-plugin"},
-		{"@martian-engineering/lossless-claw", "lossless-claw"},
-	}
-	for _, c := range cases {
-		if got := pluginDirName(c.spec); got != c.want {
-			t.Errorf("pluginDirName(%q) = %q, want %q", c.spec, got, c.want)
 		}
 	}
 }
@@ -6393,38 +6375,34 @@ func TestBuildPluginsScript_WithPlugins(t *testing.T) {
 	if !strings.Contains(script, "mkdir -p /home/openclaw/.openclaw/extensions") {
 		t.Error("script should ensure ~/.openclaw/extensions exists")
 	}
-	if !strings.Contains(script, "_install_plugin() (") {
-		t.Error("script should define the _install_plugin helper")
+	if !strings.Contains(script, "openclaw plugins install 'clawhub:@martian-engineering/lossless-claw'") {
+		t.Errorf("script should install lossless-claw via openclaw CLI, got:\n%s", script)
 	}
-	if !strings.Contains(script, "_install_plugin '@martian-engineering/lossless-claw' 'lossless-claw'") {
-		t.Error("script should call _install_plugin for lossless-claw with the unscoped dir name")
-	}
-	if !strings.Contains(script, "_install_plugin 'another-plugin' 'another-plugin'") {
-		t.Error("script should call _install_plugin for another-plugin")
+	if !strings.Contains(script, "openclaw plugins install 'clawhub:another-plugin'") {
+		t.Errorf("script should install another-plugin via openclaw CLI, got:\n%s", script)
 	}
 	// Regression guard: don't emit the old broken layout
 	if strings.Contains(script, "cd /home/openclaw/.openclaw && npm install") {
 		t.Error("script must not install plugins into ~/.openclaw/node_modules (issue #474)")
 	}
+	// Regression guard #505: must not call raw `npm install` or `npm pack`,
+	// which fail on workspace:* deps used by first-party plugins like matrix.
+	if strings.Contains(script, "npm pack") || strings.Contains(script, "npm install") {
+		t.Errorf("script must not invoke raw npm install/pack (issue #505), got:\n%s", script)
+	}
 }
 
-func TestBuildPluginsScript_StagesViaNpmPack(t *testing.T) {
-	instance := newTestInstance("stage-plugins")
-	instance.Spec.Plugins = []string{"some-plugin"}
+func TestBuildPluginsScript_UsesClawhubCLI(t *testing.T) {
+	instance := newTestInstance("clawhub-plugins")
+	instance.Spec.Plugins = []string{"@openclaw/matrix"}
 
 	script := BuildPluginsScript(instance)
 
-	// Helper must use npm pack + atomic rename to avoid leaving partial state
-	// visible to the gateway's plugin discovery.
-	for _, want := range []string{
-		`npm pack "$spec"`,
-		`tar -xzf "$tarball"`,
-		`npm install --omit=dev`,
-		`mv "$dest.tmp" "$dest"`,
-	} {
-		if !strings.Contains(script, want) {
-			t.Errorf("install helper missing %q\nfull script:\n%s", want, script)
-		}
+	// The CLI handles workspace:* dependency markers correctly, whereas raw
+	// `npm install` rejects them with EUNSUPPORTEDPROTOCOL (#505).
+	want := "openclaw plugins install 'clawhub:@openclaw/matrix'"
+	if !strings.Contains(script, want) {
+		t.Errorf("expected %q in script, got:\n%s", want, script)
 	}
 }
 
@@ -6434,20 +6412,20 @@ func TestBuildPluginsScript_Deterministic(t *testing.T) {
 
 	script := BuildPluginsScript(instance)
 
-	// Find the lines that invoke the install helper for our plugins.
+	// Find the lines that invoke the install command for our plugins.
 	var pluginCalls []string
 	for _, line := range strings.Split(script, "\n") {
-		if strings.HasPrefix(line, "_install_plugin '") {
+		if strings.HasPrefix(line, "openclaw plugins install ") {
 			pluginCalls = append(pluginCalls, line)
 		}
 	}
 	if len(pluginCalls) != 2 {
-		t.Fatalf("expected 2 _install_plugin calls, got %d: %v", len(pluginCalls), pluginCalls)
+		t.Fatalf("expected 2 install calls, got %d: %v", len(pluginCalls), pluginCalls)
 	}
-	if !strings.Contains(pluginCalls[0], "'a-plugin'") {
+	if !strings.Contains(pluginCalls[0], "'clawhub:a-plugin'") {
 		t.Errorf("expected a-plugin first, got %q", pluginCalls[0])
 	}
-	if !strings.Contains(pluginCalls[1], "'z-plugin'") {
+	if !strings.Contains(pluginCalls[1], "'clawhub:z-plugin'") {
 		t.Errorf("expected z-plugin second, got %q", pluginCalls[1])
 	}
 }
@@ -6486,21 +6464,43 @@ func TestBuildStatefulSet_WithPlugins_InitPluginsContainer(t *testing.T) {
 		t.Errorf("init-plugins image = %q, want %q", pluginsContainer.Image, expectedImage)
 	}
 
-	// Should have HOME and NPM_CONFIG_CACHE env vars
+	// HOME must point at the OpenClaw user dir so the `openclaw plugins
+	// install` CLI finds its data directory (#505); NPM_CONFIG_PREFIX and
+	// NPM_CONFIG_CACHE point at PVC subpaths so the CLI's npm work persists
+	// the same way the main container expects.
 	envMap := map[string]string{}
 	for _, e := range pluginsContainer.Env {
 		envMap[e.Name] = e.Value
 	}
-	if envMap["HOME"] != "/tmp" {
-		t.Errorf("init-plugins HOME = %q, want /tmp", envMap["HOME"])
+	if envMap["HOME"] != "/home/openclaw" {
+		t.Errorf("init-plugins HOME = %q, want /home/openclaw", envMap["HOME"])
 	}
-	if envMap["NPM_CONFIG_CACHE"] != "/tmp/.npm" {
-		t.Errorf("init-plugins NPM_CONFIG_CACHE = %q, want /tmp/.npm", envMap["NPM_CONFIG_CACHE"])
+	if envMap["NPM_CONFIG_PREFIX"] != "/home/openclaw/.local" {
+		t.Errorf("init-plugins NPM_CONFIG_PREFIX = %q, want /home/openclaw/.local", envMap["NPM_CONFIG_PREFIX"])
+	}
+	if envMap["NPM_CONFIG_CACHE"] != "/home/openclaw/.cache/npm" {
+		t.Errorf("init-plugins NPM_CONFIG_CACHE = %q, want /home/openclaw/.cache/npm", envMap["NPM_CONFIG_CACHE"])
 	}
 
-	// Should have data and plugins-tmp mounts
-	assertVolumeMount(t, pluginsContainer.VolumeMounts, "data", "/home/openclaw/.openclaw")
-	assertVolumeMount(t, pluginsContainer.VolumeMounts, "plugins-tmp", "/tmp")
+	// Should have data, .local and .cache subpath mounts, plus plugins-tmp.
+	// `data` is mounted at three different paths, so check (name, path)
+	// tuples explicitly rather than going through assertVolumeMount (which
+	// stops at the first name match).
+	type mp struct{ name, path string }
+	have := map[mp]bool{}
+	for _, m := range pluginsContainer.VolumeMounts {
+		have[mp{m.Name, m.MountPath}] = true
+	}
+	for _, want := range []mp{
+		{"data", "/home/openclaw/.openclaw"},
+		{"data", "/home/openclaw/.local"},
+		{"data", "/home/openclaw/.cache"},
+		{"plugins-tmp", "/tmp"},
+	} {
+		if !have[want] {
+			t.Errorf("missing volume mount %s at %s", want.name, want.path)
+		}
+	}
 
 	// Security context should be restricted
 	sc := pluginsContainer.SecurityContext
@@ -6522,10 +6522,10 @@ func TestBuildStatefulSet_WithPlugins_InitPluginsContainer(t *testing.T) {
 		t.Errorf("init-plugins NPM_CONFIG_IGNORE_SCRIPTS = %q, want \"true\"", envMap["NPM_CONFIG_IGNORE_SCRIPTS"])
 	}
 
-	// Script should contain npm install
+	// Script should invoke the openclaw CLI (#505)
 	script := pluginsContainer.Command[2]
-	if !strings.Contains(script, "npm install") {
-		t.Errorf("expected npm install in script, got: %q", script)
+	if !strings.Contains(script, "openclaw plugins install") {
+		t.Errorf("expected openclaw plugins install in script, got: %q", script)
 	}
 }
 
@@ -6558,11 +6558,14 @@ func TestBuildStatefulSet_WithPlugins_EnvAndEnvFromPropagated(t *testing.T) {
 
 	// Hardcoded env vars should come first (take precedence)
 	names := envNames(pluginsContainer.Env)
-	if len(names) < 4 {
-		t.Fatalf("expected at least 4 env vars, got %d: %v", len(names), names)
+	if len(names) < 5 {
+		t.Fatalf("expected at least 5 env vars, got %d: %v", len(names), names)
 	}
-	if names[0] != "HOME" || names[1] != "NPM_CONFIG_CACHE" || names[2] != "NPM_CONFIG_IGNORE_SCRIPTS" {
-		t.Errorf("hardcoded env vars should come first, got %v", names[:3])
+	wantPrefix := []string{"HOME", "NPM_CONFIG_PREFIX", "NPM_CONFIG_CACHE", "NPM_CONFIG_IGNORE_SCRIPTS"}
+	for i, want := range wantPrefix {
+		if names[i] != want {
+			t.Errorf("hardcoded env var %d = %q, want %q (full: %v)", i, names[i], want, names[:len(wantPrefix)])
+		}
 	}
 
 	// User-defined env var should be appended after hardcoded ones

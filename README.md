@@ -530,7 +530,7 @@ spec:
     - "some-other-plugin"
 ```
 
-This is the layout the OpenClaw gateway's plugin discovery expects - it scans direct subdirectories of `~/.openclaw/extensions/` for plugin manifests and skips `node_modules/` entirely. Each install is staged via `npm pack`, populated with its runtime dependencies via `npm install --omit=dev`, and atomically renamed into place so a partial install is never visible to the gateway.
+This is the layout the OpenClaw gateway's plugin discovery expects - it scans direct subdirectories of `~/.openclaw/extensions/` for plugin manifests and skips `node_modules/` entirely. The init container shells out to `openclaw plugins install clawhub:<pkg>` (the OpenClaw CLI's ClawHub installer) so plugins published with `workspace:*` dependency markers — such as the first-party `@openclaw/matrix` — resolve correctly. Raw `npm install` rejects those with `EUNSUPPORTEDPROTOCOL`.
 
 npm lifecycle scripts are disabled globally on the init container (`NPM_CONFIG_IGNORE_SCRIPTS=true`) to mitigate supply chain attacks. The PVC backs `~/.openclaw/`, so installs persist across pod restarts.
 

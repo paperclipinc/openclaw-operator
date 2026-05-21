@@ -2064,7 +2064,7 @@ var _ = Describe("OpenClawInstance Controller", func() {
 			_ = k8sClient.Delete(ctx, ns)
 		})
 
-		It("Should produce an init-plugins container with npm install for plugins", func() {
+		It("Should produce an init-plugins container that installs via the openclaw CLI", func() {
 			if os.Getenv("E2E_SKIP_RESOURCE_VALIDATION") == "true" {
 				Skip("Skipping resource validation in minimal mode")
 			}
@@ -2084,7 +2084,12 @@ var _ = Describe("OpenClawInstance Controller", func() {
 						Repository: "ghcr.io/openclaw/openclaw",
 						Tag:        "latest",
 					},
-					Plugins: []string{"@martian-engineering/lossless-claw"},
+					// `@openclaw/matrix` is the first-party plugin whose npm
+					// tarball declares `workspace:*` deps and triggered #505.
+					// Raw `npm install` rejects it with EUNSUPPORTEDPROTOCOL;
+					// going through the openclaw CLI's clawhub installer
+					// resolves it correctly.
+					Plugins: []string{"@openclaw/matrix", "@martian-engineering/lossless-claw"},
 				},
 			}
 			Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
@@ -2106,23 +2111,29 @@ var _ = Describe("OpenClawInstance Controller", func() {
 			}
 			Expect(pluginsContainer).NotTo(BeNil(), "init-plugins container should exist")
 
-			// Script must install via _install_plugin into ~/.openclaw/extensions/
-			// (issue #474 - the previous `cd ~/.openclaw && npm install` layout
-			// landed plugins in node_modules/, which the gateway loader
-			// explicitly skips).
 			script := pluginsContainer.Command[2]
 			Expect(script).To(ContainSubstring("mkdir -p /home/openclaw/.openclaw/extensions"),
 				"init-plugins must ensure the extensions directory exists")
-			Expect(script).To(ContainSubstring("_install_plugin '@martian-engineering/lossless-claw' 'lossless-claw'"),
-				"plugin should be installed via _install_plugin into the unscoped extensions/<name> dir")
+			Expect(script).To(ContainSubstring("openclaw plugins install 'clawhub:@openclaw/matrix'"),
+				"matrix must be installed via the openclaw CLI (issue #505)")
+			Expect(script).To(ContainSubstring("openclaw plugins install 'clawhub:@martian-engineering/lossless-claw'"),
+				"third-party plugins must also go through the openclaw CLI")
+			// Regression guards: previous layouts that fail for workspace:*-publishing plugins.
 			Expect(script).NotTo(ContainSubstring("cd /home/openclaw/.openclaw && npm install"),
 				"plugins must not be installed into ~/.openclaw/node_modules (issue #474)")
+			Expect(script).NotTo(ContainSubstring("npm pack"),
+				"plugins must not be installed via npm pack + npm install (issue #505)")
 
-			// NPM_CONFIG_IGNORE_SCRIPTS should be set
+			// Env vars must mirror the user's verified workaround in #505 so the
+			// CLI's data and npm state land on the PVC.
 			envMap := map[string]string{}
 			for _, e := range pluginsContainer.Env {
 				envMap[e.Name] = e.Value
 			}
+			Expect(envMap["HOME"]).To(Equal("/home/openclaw"),
+				"HOME must point at the openclaw user dir so the CLI finds its data dir")
+			Expect(envMap["NPM_CONFIG_PREFIX"]).To(Equal("/home/openclaw/.local"))
+			Expect(envMap["NPM_CONFIG_CACHE"]).To(Equal("/home/openclaw/.cache/npm"))
 			Expect(envMap["NPM_CONFIG_IGNORE_SCRIPTS"]).To(Equal("true"),
 				"NPM_CONFIG_IGNORE_SCRIPTS should be true for supply chain security")
 

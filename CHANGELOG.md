@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.4](https://github.com/openclaw-rocks/openclaw-operator/compare/v0.34.3...v0.34.4) (2026-05-21)
+
+
+### Bug Fixes
+
+* **plugins:** install via openclaw CLI to handle workspace:* deps ([#506](https://github.com/openclaw-rocks/openclaw-operator/issues/506)) ([00d08d9](https://github.com/openclaw-rocks/openclaw-operator/commit/00d08d98818e8d533a6de0533ca139aedd930f9f))
+
+## [0.34.3](https://github.com/openclaw-rocks/openclaw-operator/compare/v0.34.2...v0.34.3) (2026-05-20)
+
+
+### Bug Fixes
+
+* **environment-skill:** document openclaw CLI availability ([#499](https://github.com/openclaw-rocks/openclaw-operator/issues/499)) ([5067192](https://github.com/openclaw-rocks/openclaw-operator/commit/5067192e9d94f9d58dcef2f3e7d38d04fedda582))
+
 ## [0.34.2](https://github.com/openclaw-rocks/openclaw-operator/compare/v0.34.1...v0.34.2) (2026-05-20)
 
 
