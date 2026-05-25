@@ -5,14 +5,24 @@
 # OpenClaw Kubernetes Operator
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Report Card](https://goreportcard.com/badge/github.com/OpenClaw-rocks/openclaw-operator)](https://goreportcard.com/report/github.com/OpenClaw-rocks/openclaw-operator)
-[![CI](https://github.com/OpenClaw-rocks/openclaw-operator/actions/workflows/ci.yaml/badge.svg)](https://github.com/OpenClaw-rocks/openclaw-operator/actions/workflows/ci.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/paperclipinc/openclaw-operator)](https://goreportcard.com/report/github.com/paperclipinc/openclaw-operator)
+[![CI](https://github.com/paperclipinc/openclaw-operator/actions/workflows/ci.yaml/badge.svg)](https://github.com/paperclipinc/openclaw-operator/actions/workflows/ci.yaml)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.28%2B-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io)
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)](https://go.dev)
 
 **Self-host [OpenClaw](https://openclaw.ai) AI agents on Kubernetes with production-grade security, observability, and lifecycle management.**
 
 OpenClaw is an AI agent platform that acts on your behalf across Telegram, Discord, WhatsApp, and Signal. It manages your inbox, calendar, smart home, and more through 50+ integrations. While [Paperclip Inc.](https://github.com/paperclipinc) offers fully managed hosting, this operator lets you run OpenClaw on your own infrastructure with the same operational rigor.
+
+> **Migration notice (May 2026):** This project moved from the `openclaw-rocks` GitHub org to **`paperclipinc`**. The container registry and Helm chart OCI path changed accordingly:
+>
+> | | Old (no longer available) | New |
+> |---|---|---|
+> | Helm chart | `oci://ghcr.io/openclaw-rocks/charts/openclaw-operator` | `oci://ghcr.io/paperclipinc/charts/openclaw-operator` |
+> | Container image | `ghcr.io/openclaw-rocks/openclaw-operator` | `ghcr.io/paperclipinc/openclaw-operator` |
+>
+> If you pin the image in your values, update `image.repository` to `ghcr.io/paperclipinc/openclaw-operator`.
+> CRD API group (`openclaw.rocks/v1alpha1`) is unchanged — no cluster-side migration needed.
 
 ---
 
