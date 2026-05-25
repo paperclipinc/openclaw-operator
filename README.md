@@ -12,7 +12,7 @@
 
 **Self-host [OpenClaw](https://openclaw.ai) AI agents on Kubernetes with production-grade security, observability, and lifecycle management.**
 
-OpenClaw is an AI agent platform that acts on your behalf across Telegram, Discord, WhatsApp, and Signal. It manages your inbox, calendar, smart home, and more through 50+ integrations. While [OpenClaw.rocks](https://openclaw.rocks) offers fully managed hosting, this operator lets you run OpenClaw on your own infrastructure with the same operational rigor.
+OpenClaw is an AI agent platform that acts on your behalf across Telegram, Discord, WhatsApp, and Signal. It manages your inbox, calendar, smart home, and more through 50+ integrations. While [Paperclip Inc.](https://github.com/paperclipinc) offers fully managed hosting, this operator lets you run OpenClaw on your own infrastructure with the same operational rigor.
 
 ---
 
@@ -143,7 +143,7 @@ Every request is validated against the instance's allowlist policy. Protected co
 
 ```bash
 helm install openclaw-operator \
-  oci://ghcr.io/openclaw-rocks/charts/openclaw-operator \
+  oci://ghcr.io/paperclipinc/charts/openclaw-operator \
   --namespace openclaw-operator-system \
   --create-namespace
 ```
@@ -156,7 +156,7 @@ helm install openclaw-operator \
 make install
 
 # Deploy the operator
-make deploy IMG=ghcr.io/openclaw-rocks/openclaw-operator:latest
+make deploy IMG=ghcr.io/paperclipinc/openclaw-operator:latest
 ```
 
 </details>
@@ -172,7 +172,7 @@ to that list (plus the operator's own namespace, for backup credentials).
 
 ```bash
 helm install openclaw-operator \
-  oci://ghcr.io/openclaw-rocks/charts/openclaw-operator \
+  oci://ghcr.io/paperclipinc/charts/openclaw-operator \
   --namespace openclaw-operator-system \
   --create-namespace \
   --set 'watchNamespaces={team-a,team-b}'
@@ -185,7 +185,7 @@ SecurityCenter policy), disable chart-managed RBAC:
 
 ```bash
 helm install openclaw-operator \
-  oci://ghcr.io/openclaw-rocks/charts/openclaw-operator \
+  oci://ghcr.io/paperclipinc/charts/openclaw-operator \
   --namespace openclaw-operator-system \
   --create-namespace \
   --set rbac.create=false
@@ -483,8 +483,8 @@ Skill packs bundle multiple files (SKILL.md, scripts, config) into a single inst
 ```yaml
 spec:
   skills:
-    - "pack:openclaw-rocks/skills/image-gen"            # latest from default branch
-    - "pack:openclaw-rocks/skills/image-gen@v1.0.0"     # pinned to tag
+    - "pack:paperclipinc/skills/image-gen"            # latest from default branch
+    - "pack:paperclipinc/skills/image-gen@v1.0.0"     # pinned to tag
     - "pack:myorg/private-skills/custom-tool@main"       # private repo (requires GITHUB_TOKEN)
 ```
 
@@ -1111,7 +1111,7 @@ spec:
         enabled: true
         labels:
           release: kube-prometheus-stack  # must match Prometheus ruleSelector
-        runbookBaseURL: https://openclaw.rocks/docs/runbooks  # default
+        runbookBaseURL: https://github.com/paperclipinc/openclaw-operator/tree/main/docs/runbooks  # default
 ```
 
 Alerts: `OpenClawReconcileErrors`, `OpenClawInstanceDegraded`, `OpenClawSlowReconciliation`, `OpenClawPodCrashLooping`, `OpenClawPodOOMKilled`, `OpenClawPVCNearlyFull`, `OpenClawAutoUpdateRollback`
@@ -1277,7 +1277,7 @@ See the full [roadmap](ROADMAP.md) for details.
 
 ## Don't Want to Self-Host?
 
-[OpenClaw.rocks](https://openclaw.rocks) offers fully managed hosting starting at **EUR 15/mo**. No Kubernetes cluster required. Setup, updates, and 24/7 uptime handled for you.
+[Paperclip Inc.](https://github.com/paperclipinc) offers fully managed hosting starting at **EUR 15/mo**. No Kubernetes cluster required. Setup, updates, and 24/7 uptime handled for you.
 
 ## Contributing
 

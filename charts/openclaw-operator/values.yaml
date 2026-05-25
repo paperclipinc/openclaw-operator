@@ -5,7 +5,7 @@ replicaCount: 1
 
 # Operator image configuration
 image:
-  repository: ghcr.io/openclaw-rocks/openclaw-operator
+  repository: ghcr.io/paperclipinc/openclaw-operator
   pullPolicy: IfNotPresent
   tag: ""  # Defaults to chart appVersion
 

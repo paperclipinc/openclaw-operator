@@ -1,7 +1,7 @@
 # Docs site for openclaw-operator
 
 This directory contains the mkdocs-material project that publishes
-[openclaw.rocks/docs/operator/](https://openclaw.rocks/docs/operator/latest/).
+[paperclipinc.github.io/openclaw-operator/](https://paperclipinc.github.io/openclaw-operator/latest/).
 
 ## Local preview
 
@@ -42,7 +42,7 @@ run `make api-docs` and commit the result in the same PR.
 out the released tag, runs `mike deploy <minor> latest`, and pushes to
 `gh-pages`. GH Pages serves the result at
 `docs-operator.openclaw.rocks`, and Caddy on the openclaw.rocks box
-reverse-proxies `openclaw.rocks/docs/operator/*` to it.
+reverse-proxies `paperclipinc.github.io/openclaw-operator/*` to it.
 
 ## Republishing a specific tag manually
 

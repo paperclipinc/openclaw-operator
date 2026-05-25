@@ -6,7 +6,7 @@ metadata:
   annotations:
     capabilities: "Auto Pilot"
     categories: "AI/Machine Learning, Developer Tools, Application Runtime"
-    containerImage: ghcr.io/openclaw-rocks/openclaw-operator:v0.9.0
+    containerImage: ghcr.io/paperclipinc/openclaw-operator:v0.9.0
     createdAt: "2026-02-11T00:00:00Z"
     support: OpenClaw.rocks
     repository: https://github.com/OpenClaw-rocks/openclaw-operator
@@ -224,7 +224,7 @@ spec:
       supported: true
   relatedImages:
     - name: openclaw-operator
-      image: ghcr.io/openclaw-rocks/openclaw-operator:v0.9.0
+      image: ghcr.io/paperclipinc/openclaw-operator:v0.9.0
     - name: openclaw
       image: ghcr.io/openclaw/openclaw:latest
     - name: chromium-sidecar
@@ -588,7 +588,7 @@ spec:
                 terminationGracePeriodSeconds: 10
                 containers:
                   - name: manager
-                    image: ghcr.io/openclaw-rocks/openclaw-operator:v0.9.0
+                    image: ghcr.io/paperclipinc/openclaw-operator:v0.9.0
                     command:
                       - /manager
                     args:
