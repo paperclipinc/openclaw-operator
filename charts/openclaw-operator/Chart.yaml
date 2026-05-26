@@ -18,7 +18,7 @@ keywords:
 home: https://openclaw.rocks
 icon: https://openclaw.rocks/favicon.svg
 sources:
-  - https://github.com/OpenClaw-rocks/openclaw-operator
+  - https://github.com/paperclipinc/openclaw-operator
 maintainers:
   - name: Jannes Stubbemann
     email: jannes@openclaw.rocks
@@ -40,7 +40,7 @@ annotations:
     - name: Artifact Hub
       url: https://artifacthub.io/packages/olm/community-operators/openclaw-operator
     - name: support
-      url: https://github.com/OpenClaw-rocks/openclaw-operator/issues
+      url: https://github.com/paperclipinc/openclaw-operator/issues
   artifacthub.io/crds: |
     - kind: OpenClawInstance
       version: v1alpha1

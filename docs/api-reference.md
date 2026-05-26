@@ -1,7 +1,7 @@
 # API Reference
 
 ## Packages
-- [openclaw.rocks/v1alpha1](#openclawrocksv1alpha1)
+- [openclaw.rocks/v1alpha1](#paperclipincv1alpha1)
 
 
 ## openclaw.rocks/v1alpha1
