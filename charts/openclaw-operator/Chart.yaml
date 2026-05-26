@@ -67,7 +67,7 @@ annotations:
             size: 10Gi
   artifacthub.io/images: |
     - name: openclaw-operator
-      image: ghcr.io/openclaw-rocks/openclaw-operator:v0.9.0
+      image: ghcr.io/paperclipinc/openclaw-operator:v0.9.0
   artifacthub.io/changes: |
     - kind: added
       description: PVC backup-on-delete and restore-from-backup via rclone/S3

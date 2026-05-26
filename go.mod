@@ -1,4 +1,4 @@
-module github.com/openclawrocks/openclaw-operator
+module github.com/paperclipinc/openclaw-operator
 
 go 1.25.0
 

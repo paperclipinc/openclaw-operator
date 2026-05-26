@@ -44,7 +44,7 @@ linters-settings:
       - performance
       - style
   goimports:
-    local-prefixes: github.com/openclawrocks/openclaw-operator
+    local-prefixes: github.com/paperclipinc/openclaw-operator
   govet:
     enable:
       - shadow

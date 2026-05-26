@@ -15,7 +15,7 @@ Ingress, and ServiceMonitor. The operator reconciles that resource into
 a hardened, monitored, self-healing deployment.
 
 For the project pitch and a feature overview, see the
-[README](https://github.com/openclaw-rocks/openclaw-operator).
+[README](https://github.com/paperclipinc/openclaw-operator).
 
 ## Where to start
 

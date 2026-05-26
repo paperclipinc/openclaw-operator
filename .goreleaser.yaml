@@ -25,7 +25,7 @@ dockers_v2:
     ids:
       - manager
     images:
-      - "ghcr.io/openclaw-rocks/openclaw-operator"
+      - "ghcr.io/paperclipinc/openclaw-operator"
     tags:
       - "{{ .Tag }}"
       - "{{ .Major }}.{{ .Minor }}"
@@ -70,5 +70,5 @@ release:
   draft: true
   replace_existing_artifacts: true
   github:
-    owner: openclaw-rocks
+    owner: paperclipinc
     name: openclaw-operator
