@@ -2,78 +2,78 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/api-reference/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/architecture/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/backup-restore/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/custom-providers/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/deployment/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/external-secrets/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/full-example/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/model-fallback/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/openclaw-cluster-defaults/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/openclaw-self-config/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/troubleshooting/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawAutoUpdateRollback/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawInstanceDegraded/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawPVCNearlyFull/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawPodCrashLooping/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawPodOOMKilled/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawReconcileErrors/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
     <url>
          <loc>https://openclaw.rocks/docs/operator/latest/runbooks/OpenClawSlowReconciliation/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-05-26</lastmod>
     </url>
 </urlset>
