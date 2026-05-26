@@ -63,7 +63,7 @@ jobs:
           gh auth setup-git
 
           # Clone the community-operators repo (fork is auto-created by gh)
-          gh repo fork k8s-operatorhub/community-operators --clone=true --remote=true -- community-operators
+          gh repo fork k8s-operatorhub/community-operators --clone -- community-operators
           cd community-operators
 
           git config user.name "github-actions[bot]"
