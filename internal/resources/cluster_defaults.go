@@ -19,7 +19,7 @@ package resources
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	openclawv1alpha1 "github.com/openclawrocks/openclaw-operator/api/v1alpha1"
+	openclawv1alpha1 "github.com/paperclipinc/openclaw-operator/api/v1alpha1"
 )
 
 // ApplyClusterDefaults returns a deep copy of instance with unset fields filled

@@ -146,7 +146,7 @@ EOF
 
 ```bash
 helm install openclaw-operator \
-  oci://ghcr.io/openclaw-rocks/charts/openclaw-operator \
+  oci://ghcr.io/paperclipinc/charts/openclaw-operator \
   --namespace openclaw-system --create-namespace \
   --set leaderElection.enabled=true
 ```
@@ -263,7 +263,7 @@ EOF
 
 ```bash
 helm install openclaw-operator \
-  oci://ghcr.io/openclaw-rocks/charts/openclaw-operator \
+  oci://ghcr.io/paperclipinc/charts/openclaw-operator \
   --namespace openclaw-system --create-namespace \
   --set leaderElection.enabled=true
 ```
@@ -383,7 +383,7 @@ EOF
 
 ```bash
 helm install openclaw-operator \
-  oci://ghcr.io/openclaw-rocks/charts/openclaw-operator \
+  oci://ghcr.io/paperclipinc/charts/openclaw-operator \
   --namespace openclaw-system --create-namespace \
   --set leaderElection.enabled=true
 ```
@@ -458,7 +458,7 @@ kubectl get storageclass
 ```bash
 # Add the OCI registry (no separate repo add needed for OCI)
 helm install openclaw-operator \
-  oci://ghcr.io/openclaw-rocks/charts/openclaw-operator \
+  oci://ghcr.io/paperclipinc/charts/openclaw-operator \
   --namespace openclaw-system --create-namespace \
   --set leaderElection.enabled=true
 ```
@@ -467,14 +467,14 @@ helm install openclaw-operator \
 
 ```bash
 # Clone the repository
-git clone https://github.com/OpenClaw-rocks/openclaw-operator.git
+git clone https://github.com/paperclipinc/openclaw-operator.git
 cd openclaw-operator
 
 # Install CRDs
 make install
 
 # Deploy the operator
-make deploy IMG=ghcr.io/openclaw-rocks/openclaw-operator:v0.1.0
+make deploy IMG=ghcr.io/paperclipinc/openclaw-operator:v0.1.0
 ```
 
 ### 4. Create an Instance

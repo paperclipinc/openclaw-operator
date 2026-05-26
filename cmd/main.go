@@ -48,10 +48,10 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	openclawv1alpha1 "github.com/openclawrocks/openclaw-operator/api/v1alpha1"
-	"github.com/openclawrocks/openclaw-operator/internal/controller"
-	"github.com/openclawrocks/openclaw-operator/internal/registry"
-	"github.com/openclawrocks/openclaw-operator/internal/skillpacks"
+	openclawv1alpha1 "github.com/paperclipinc/openclaw-operator/api/v1alpha1"
+	"github.com/paperclipinc/openclaw-operator/internal/controller"
+	"github.com/paperclipinc/openclaw-operator/internal/registry"
+	"github.com/paperclipinc/openclaw-operator/internal/skillpacks"
 )
 
 // version is set at build time via ldflags (see .goreleaser.yaml).

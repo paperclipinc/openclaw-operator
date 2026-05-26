@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openclawrocks/openclaw-operator/internal/resources"
+	"github.com/paperclipinc/openclaw-operator/internal/resources"
 )
 
 const defaultBaseURL = "https://api.github.com"

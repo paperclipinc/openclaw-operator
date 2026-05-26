@@ -56,7 +56,7 @@ git clone https://github.com/YOUR_USERNAME/openclaw-operator.git
 cd openclaw-operator
 
 # Add upstream remote
-git remote add upstream https://github.com/OpenClaw-rocks/openclaw-operator.git
+git remote add upstream https://github.com/paperclipinc/openclaw-operator.git
 
 # Install dependencies
 go mod download

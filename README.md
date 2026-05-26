@@ -5,8 +5,8 @@
 # OpenClaw Kubernetes Operator
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Report Card](https://goreportcard.com/badge/github.com/OpenClaw-rocks/openclaw-operator)](https://goreportcard.com/report/github.com/OpenClaw-rocks/openclaw-operator)
-[![CI](https://github.com/OpenClaw-rocks/openclaw-operator/actions/workflows/ci.yaml/badge.svg)](https://github.com/OpenClaw-rocks/openclaw-operator/actions/workflows/ci.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/paperclipinc/openclaw-operator)](https://goreportcard.com/report/github.com/paperclipinc/openclaw-operator)
+[![CI](https://github.com/paperclipinc/openclaw-operator/actions/workflows/ci.yaml/badge.svg)](https://github.com/paperclipinc/openclaw-operator/actions/workflows/ci.yaml)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.28%2B-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io)
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)](https://go.dev)
 
@@ -143,7 +143,7 @@ Every request is validated against the instance's allowlist policy. Protected co
 
 ```bash
 helm install openclaw-operator \
-  oci://ghcr.io/openclaw-rocks/charts/openclaw-operator \
+  oci://ghcr.io/paperclipinc/charts/openclaw-operator \
   --namespace openclaw-operator-system \
   --create-namespace
 ```
@@ -156,7 +156,7 @@ helm install openclaw-operator \
 make install
 
 # Deploy the operator
-make deploy IMG=ghcr.io/openclaw-rocks/openclaw-operator:latest
+make deploy IMG=ghcr.io/paperclipinc/openclaw-operator:latest
 ```
 
 </details>
@@ -172,7 +172,7 @@ to that list (plus the operator's own namespace, for backup credentials).
 
 ```bash
 helm install openclaw-operator \
-  oci://ghcr.io/openclaw-rocks/charts/openclaw-operator \
+  oci://ghcr.io/paperclipinc/charts/openclaw-operator \
   --namespace openclaw-operator-system \
   --create-namespace \
   --set 'watchNamespaces={team-a,team-b}'
@@ -185,7 +185,7 @@ SecurityCenter policy), disable chart-managed RBAC:
 
 ```bash
 helm install openclaw-operator \
-  oci://ghcr.io/openclaw-rocks/charts/openclaw-operator \
+  oci://ghcr.io/paperclipinc/charts/openclaw-operator \
   --namespace openclaw-operator-system \
   --create-namespace \
   --set rbac.create=false
@@ -483,8 +483,8 @@ Skill packs bundle multiple files (SKILL.md, scripts, config) into a single inst
 ```yaml
 spec:
   skills:
-    - "pack:openclaw-rocks/skills/image-gen"            # latest from default branch
-    - "pack:openclaw-rocks/skills/image-gen@v1.0.0"     # pinned to tag
+    - "pack:paperclipinc/skills/image-gen"            # latest from default branch
+    - "pack:paperclipinc/skills/image-gen@v1.0.0"     # pinned to tag
     - "pack:myorg/private-skills/custom-tool@main"       # private repo (requires GITHUB_TOKEN)
 ```
 
@@ -1248,7 +1248,7 @@ Platform-specific deployment guides are available for:
 
 ```bash
 # Clone and set up
-git clone https://github.com/OpenClaw-rocks/openclaw-operator.git
+git clone https://github.com/paperclipinc/openclaw-operator.git
 cd openclaw-operator
 go mod download
 
