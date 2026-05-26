@@ -54,7 +54,7 @@ jobs:
 
       - name: Fork and submit to community-operators
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.OPERATORHUB_FORK_TOKEN }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           BRANCH="openclaw-operator-v${VERSION}"
