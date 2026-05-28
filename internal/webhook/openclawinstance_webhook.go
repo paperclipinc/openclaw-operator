@@ -561,7 +561,7 @@ func validateConfigSchema(instance *openclawv1alpha1.OpenClawInstance) admission
 // validateForcePaths checks that spec.config.forcePaths is only used with
 // mergeMode=merge and that each entry is a well-formed dot-path. Under
 // mergeMode=overwrite the whole config file is rebuilt on every restart,
-// so forcePaths is redundant — we reject it as a likely misconfiguration
+// so forcePaths is redundant -- we reject it as a likely misconfiguration
 // rather than silently ignoring it.
 func validateForcePaths(instance *openclawv1alpha1.OpenClawInstance) error {
 	paths := instance.Spec.Config.ForcePaths

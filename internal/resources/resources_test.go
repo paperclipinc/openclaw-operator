@@ -5701,7 +5701,7 @@ func TestBuildInitScript_MergeMode_WithForcePaths(t *testing.T) {
 	if !strings.Contains(script, wantEnv) {
 		t.Errorf("merge script missing forcePaths env, want it to contain %q\ngot: %s", wantEnv, script)
 	}
-	// The deletion loop must precede the deep merge — otherwise a
+	// The deletion loop must precede the deep merge -- otherwise a
 	// force-deleted subtree could be re-merged in from the existing PVC
 	// config before being overwritten, leaving stale partial state.
 	dpLoop := "for(const p of fp)dp(base,p);"
@@ -5720,7 +5720,7 @@ func TestBuildInitScript_MergeMode_WithForcePaths(t *testing.T) {
 }
 
 func TestBuildInitScript_OverwriteMode_IgnoresForcePaths(t *testing.T) {
-	// Under overwrite mode, forcePaths is rejected by the webhook — but if
+	// Under overwrite mode, forcePaths is rejected by the webhook -- but if
 	// it leaks through (e.g. an older webhook deployment) the script
 	// generator must still produce a valid overwrite script and never embed
 	// the forcePaths machinery, because there is no merge to apply them to.

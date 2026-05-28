@@ -687,7 +687,7 @@ func shellQuote(s string) string {
 
 // forcePathsJSON returns spec.config.forcePaths as a compact JSON array
 // string suitable for injection via the __forcepaths env var. Always returns
-// a valid JSON array, including "[]" when unset — the merge script's
+// a valid JSON array, including "[]" when unset -- the merge script's
 // JSON.parse expects valid input either way.
 func forcePathsJSON(instance *openclawv1alpha1.OpenClawInstance) string {
 	paths := instance.Spec.Config.ForcePaths
@@ -723,7 +723,7 @@ func BuildInitScript(instance *openclawv1alpha1.OpenClawInstance, externalWorksp
 			// The config path is passed via env var to avoid shell/JS quoting issues.
 			//
 			// When spec.config.forcePaths is non-empty, each listed dot-path is
-			// deleted from the PVC config before the deep merge — so the
+			// deleted from the PVC config before the deep merge -- so the
 			// final value at that path is whatever the CR's raw config supplies,
 			// not whatever the agent persisted on disk. This is the
 			// tenant-isolation lever for managed multi-tenant deployments: it
@@ -2584,7 +2584,7 @@ func buildConfigRestoreCommand(instance *openclawv1alpha1.OpenClawInstance) stri
 	case instance.Spec.Config.MergeMode == ConfigMergeModeMerge:
 		// Deep-merge operator config into existing PVC config via Node.js.
 		// Same logic as the init container merge, but with main container paths.
-		// forcePaths handling must match the init script — otherwise an
+		// forcePaths handling must match the init script -- otherwise an
 		// attacker could persist a rogue subtree across a container restart
 		// (which does not re-run init containers) and bypass tenant isolation.
 		return fmt.Sprintf(

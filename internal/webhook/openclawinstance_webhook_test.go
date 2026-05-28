@@ -1612,7 +1612,7 @@ func TestValidateCreate_ForcePaths_ValidWithMerge(t *testing.T) {
 }
 
 func TestValidateCreate_ForcePaths_EmptyAllowed(t *testing.T) {
-	// An empty / unset forcePaths must not trip the mergeMode check —
+	// An empty / unset forcePaths must not trip the mergeMode check --
 	// otherwise the field becomes effectively mandatory under overwrite,
 	// which would be a breaking change for every existing CR.
 	v := &OpenClawInstanceValidator{}
@@ -1633,7 +1633,7 @@ func TestValidateCreate_ForcePaths_EmptyAllowed(t *testing.T) {
 
 func TestValidateCreate_ForcePaths_RequiresMerge(t *testing.T) {
 	// Under overwrite mode the whole file is rebuilt every restart, so
-	// forcePaths is meaningless. Reject rather than silently ignore — the
+	// forcePaths is meaningless. Reject rather than silently ignore -- the
 	// user almost certainly didn't mean to set it.
 	v := &OpenClawInstanceValidator{}
 	instance := newTestInstance()
@@ -1652,7 +1652,7 @@ func TestValidateCreate_ForcePaths_RequiresMerge(t *testing.T) {
 func TestValidateCreate_ForcePaths_RequiresMergeMode_DefaultedOverwrite(t *testing.T) {
 	// The defaulter normally fills MergeMode="overwrite", but ValidateCreate
 	// is exercised directly in unit tests so the field may be empty. Treat
-	// an empty mergeMode as "not merge" — the defaulter's contract is that
+	// an empty mergeMode as "not merge" -- the defaulter's contract is that
 	// empty means overwrite.
 	v := &OpenClawInstanceValidator{}
 	instance := newTestInstance()
@@ -1750,7 +1750,7 @@ func TestValidateCreate_ForcePaths_ReportsBadEntryIndex(t *testing.T) {
 	instance.Spec.Config.ForcePaths = []string{
 		"gateway",          // ok
 		"models.providers", // ok
-		"bad..path",        // bad — index 2
+		"bad..path",        // bad -- index 2
 		"agents",           // never reached
 	}
 

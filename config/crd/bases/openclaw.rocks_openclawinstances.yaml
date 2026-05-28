@@ -1595,13 +1595,13 @@ spec:
 
                       Use case: a managed deployer (operator of a multi-tenant openclaw
                       service) wants tenants to persist user-owned config across restarts
-                      (channels.telegram.botToken, settings, etc — requires mergeMode=merge)
+                      (channels.telegram.botToken, settings, etc -- requires mergeMode=merge)
                       but must guarantee that operator-owned paths (gateway auth tokens,
                       allowed model providers, sandbox image) are always rebuilt from the CR.
                       Without forcePaths, a tenant could persist e.g.
                       models.providers.<rogue>.apiKey via the Control UI and route inference
                       through their own third-party key while consuming the deployer's
-                      compute — a verified attack path.
+                      compute -- a verified attack path.
 
                       Only applies when mergeMode=merge. Ignored (and rejected by the
                       validating webhook) under mergeMode=overwrite, which already overwrites
