@@ -1,9 +1,9 @@
 # Default owners for everything in the repo
-* @OpenClaw-rocks/maintainers
+* @paperclipinc/maintainers
 
 # API changes require additional review
-/api/ @OpenClaw-rocks/maintainers
+/api/ @paperclipinc/maintainers
 
 # Security-related changes
-/internal/webhook/ @OpenClaw-rocks/maintainers
-/internal/security/ @OpenClaw-rocks/maintainers
+/internal/webhook/ @paperclipinc/maintainers
+/internal/security/ @paperclipinc/maintainers

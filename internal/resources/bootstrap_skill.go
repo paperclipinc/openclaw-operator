@@ -17,7 +17,7 @@ limitations under the License.
 package resources
 
 import (
-	openclawv1alpha1 "github.com/openclawrocks/openclaw-operator/api/v1alpha1"
+	openclawv1alpha1 "github.com/paperclipinc/openclaw-operator/api/v1alpha1"
 )
 
 // bootstrapEnabled reports whether the operator should inject BOOTSTRAP.md

@@ -53,9 +53,9 @@ on every `helm upgrade`.
 ## Documentation
 
 For more information, visit:
-https://github.com/OpenClaw-rocks/openclaw-operator
+https://github.com/paperclipinc/openclaw-operator
 
 ## Getting Help
 
 If you encounter any issues, please file an issue at:
-https://github.com/OpenClaw-rocks/openclaw-operator/issues
+https://github.com/paperclipinc/openclaw-operator/issues

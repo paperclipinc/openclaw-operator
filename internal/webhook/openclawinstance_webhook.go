@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	openclawv1alpha1 "github.com/openclawrocks/openclaw-operator/api/v1alpha1"
-	"github.com/openclawrocks/openclaw-operator/internal/resources"
+	openclawv1alpha1 "github.com/paperclipinc/openclaw-operator/api/v1alpha1"
+	"github.com/paperclipinc/openclaw-operator/internal/resources"
 )
 
 const imageTagLatest = "latest"

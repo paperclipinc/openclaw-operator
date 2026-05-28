@@ -4,19 +4,29 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      # Mint a short-lived token (~1h) from the paperclip-release-bot GitHub App.
+      # Avoids long-lived PATs that the paperclipinc org policy now blocks.
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
       - uses: googleapis/release-please-action@v4
         id: release
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          # PAT required: tags created by GITHUB_TOKEN don't trigger
-          # downstream workflows (release.yaml). A PAT makes the tag
-          # push appear as a user action, which triggers the release.
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          # App token makes the tag push appear as a user action,
+          # which triggers downstream release.yaml. GITHUB_TOKEN cannot.
+          token: ${{ steps.app-token.outputs.token }}
 
       # skip-github-release is set in release-please-config.json so that
       # release-please does NOT create a GitHub release (which would
@@ -26,7 +36,7 @@ jobs:
       # tag manually below, and flip stale labels in a separate step.
       - name: Create release tag
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           # Detect if the current push merged a release-please PR.
           # Check both the commit message (squash merge) and the merged
@@ -71,7 +81,7 @@ jobs:
       # label gets fixed even if the tag step above was skipped or failed.
       - name: Fix stale autorelease labels
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           for STATE in merged closed; do
             STALE_PRS=$(gh pr list \

@@ -5,7 +5,7 @@ domain: openclaw.rocks
 layout:
 - go.kubebuilder.io/v4
 projectName: openclaw-operator
-repo: github.com/openclawrocks/openclaw-operator
+repo: github.com/paperclipinc/openclaw-operator
 resources:
 - api:
     crdVersion: v1
@@ -14,7 +14,7 @@ resources:
   domain: openclaw.rocks
   group: ""
   kind: OpenClawInstance
-  path: github.com/openclawrocks/openclaw-operator/api/v1alpha1
+  path: github.com/paperclipinc/openclaw-operator/api/v1alpha1
   version: v1alpha1
   webhooks:
     validation: true
@@ -25,6 +25,6 @@ resources:
   domain: openclaw.rocks
   group: ""
   kind: OpenClawSelfConfig
-  path: github.com/openclawrocks/openclaw-operator/api/v1alpha1
+  path: github.com/paperclipinc/openclaw-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

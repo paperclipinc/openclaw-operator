@@ -49,10 +49,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	openclawv1alpha1 "github.com/openclawrocks/openclaw-operator/api/v1alpha1"
-	"github.com/openclawrocks/openclaw-operator/internal/registry"
-	"github.com/openclawrocks/openclaw-operator/internal/resources"
-	"github.com/openclawrocks/openclaw-operator/internal/skillpacks"
+	openclawv1alpha1 "github.com/paperclipinc/openclaw-operator/api/v1alpha1"
+	"github.com/paperclipinc/openclaw-operator/internal/registry"
+	"github.com/paperclipinc/openclaw-operator/internal/resources"
+	"github.com/paperclipinc/openclaw-operator/internal/skillpacks"
 )
 
 const (

@@ -4,8 +4,8 @@ description: >-
   A Kubernetes operator for deploying and managing OpenClaw AI assistant
   instances
 type: application
-version: 0.34.4
-appVersion: 0.34.4
+version: 0.34.5
+appVersion: 0.34.5
 keywords:
   - kubernetes
   - operator
@@ -18,7 +18,7 @@ keywords:
 home: https://openclaw.rocks
 icon: https://openclaw.rocks/favicon.svg
 sources:
-  - https://github.com/OpenClaw-rocks/openclaw-operator
+  - https://github.com/paperclipinc/openclaw-operator
 maintainers:
   - name: Jannes Stubbemann
     email: jannes@openclaw.rocks
@@ -40,7 +40,7 @@ annotations:
     - name: Artifact Hub
       url: https://artifacthub.io/packages/olm/community-operators/openclaw-operator
     - name: support
-      url: https://github.com/OpenClaw-rocks/openclaw-operator/issues
+      url: https://github.com/paperclipinc/openclaw-operator/issues
   artifacthub.io/crds: |
     - kind: OpenClawInstance
       version: v1alpha1
@@ -67,7 +67,7 @@ annotations:
             size: 10Gi
   artifacthub.io/images: |
     - name: openclaw-operator
-      image: ghcr.io/openclaw-rocks/openclaw-operator:v0.9.0
+      image: ghcr.io/paperclipinc/openclaw-operator:v0.9.0
   artifacthub.io/changes: |
     - kind: added
       description: PVC backup-on-delete and restore-from-backup via rclone/S3

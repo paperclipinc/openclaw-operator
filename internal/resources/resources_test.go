@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	openclawv1alpha1 "github.com/openclawrocks/openclaw-operator/api/v1alpha1"
+	openclawv1alpha1 "github.com/paperclipinc/openclaw-operator/api/v1alpha1"
 )
 
 // newTestInstance creates a minimal OpenClawInstance for testing.
@@ -5326,7 +5326,7 @@ func TestBuildStatefulSet_WritablePVCSubPaths(t *testing.T) {
 	// ~/.local and ~/.cache cover pip/npm/uv package installs; ~/.config is
 	// required for tools (e.g. Codex CLI, ACP runtimes) that write config to
 	// ~/.config/<tool>/ on startup under readOnlyRootFilesystem: true.
-	// See https://github.com/openclaw-rocks/openclaw-operator/issues/456.
+	// See https://github.com/paperclipinc/openclaw-operator/issues/456.
 	wantMounts := []struct {
 		mountPath string
 		subPath   string
@@ -5358,7 +5358,7 @@ func TestBuildStatefulSet_WritablePVCSubPaths(t *testing.T) {
 // the init containers create .local, .cache, and skills subdirectories with
 // the pod UID as owner. Every downstream container that mounts these paths via
 // SubPath inherits the correct ownership from the pre-created directory.
-// See https://github.com/openclaw-rocks/openclaw-operator/issues/448.
+// See https://github.com/paperclipinc/openclaw-operator/issues/448.
 func TestBuildStatefulSet_InitUvPipMountFullDataVolume(t *testing.T) {
 	instance := newTestInstance("init-uv-hostpath")
 	sts := BuildStatefulSet(instance, "", nil, nil, nil)
@@ -5435,7 +5435,7 @@ func TestBuildStatefulSet_InitUvPipMountFullDataVolume(t *testing.T) {
 // openclaw import at the current container image. Without this symlink, bundled
 // plugins (e.g. discord) crash loop after an image upgrade because they resolve
 // "openclaw" against the stale npm-cached package on the PVC.
-// See https://github.com/openclaw-rocks/openclaw-operator/issues/462.
+// See https://github.com/paperclipinc/openclaw-operator/issues/462.
 func TestBuildStatefulSet_PluginRuntimeDepsSymlink(t *testing.T) {
 	instance := newTestInstance("plugin-runtime-deps")
 	sts := BuildStatefulSet(instance, "", nil, nil, nil)
@@ -5755,7 +5755,7 @@ func TestNormalizeClawHubSlug(t *testing.T) {
 		{"@slug (no owner)", "@mcp-server-fetch", "mcp-server-fetch"},
 		{"nested path", "@org/sub/skill-name", "skill-name"},
 		{"npm: passthrough", "npm:@openclaw/matrix", "npm:@openclaw/matrix"},
-		{"pack: passthrough", "pack:openclaw-rocks/skills/image-gen", "pack:openclaw-rocks/skills/image-gen"},
+		{"pack: passthrough", "pack:paperclipinc/skills/image-gen", "pack:paperclipinc/skills/image-gen"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
