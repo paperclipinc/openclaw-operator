@@ -32,6 +32,21 @@ spec:
           sandbox: true
       session:
         scope: "per-sender"
+    # Optional: deep-merge raw over the PVC on every reconcile so runtime
+    # changes survive restarts (e.g. channels.telegram.botToken added via
+    # the Control UI). Required for managed multi-tenant deployments where
+    # tenants need persistent user-owned config.
+    # mergeMode: merge
+    # forcePaths lets the operator still own a subset of the config tree
+    # under mergeMode=merge. Each listed dot-path is deleted from the PVC
+    # before the deep merge, so the final value comes from `raw` above. Use
+    # this to keep operator-managed paths (auth, allowed providers, sandbox
+    # image) immune to tenant edits while everything else persists.
+    # forcePaths:
+    #   - gateway
+    #   - models.providers
+    #   - agents.defaults.sandbox
+    #   - agents.defaults.model.primary
 
   # Environment variables for API keys and configuration
   envFrom:
