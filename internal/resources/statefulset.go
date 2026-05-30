@@ -1066,23 +1066,21 @@ func buildSkillsInitContainer(instance *openclawv1alpha1.OpenClawInstance) *core
 }
 
 // parsePluginEntry returns the shell command to install a single plugin entry
-// via the OpenClaw CLI's clawhub installer. Entries are npm package specs;
-// an optional "npm:" prefix is stripped for backward compatibility with the
-// previous npm-based install path.
+// via the OpenClaw CLI. Entries without a prefix are routed through ClawHub
+// (`clawhub:<spec>`); entries prefixed with "npm:" are routed through the
+// CLI's npm resolver (`npm:<spec>`), which installs the package directly
+// from the npm registry.
 //
-// Going through `openclaw plugins install clawhub:<spec>` instead of raw
-// `npm install` is required because first-party plugins (e.g. `@openclaw/matrix`)
-// are published with `workspace:*` dependency markers (the pnpm/yarn-berry
-// workspace protocol), which npm rejects with EUNSUPPORTEDPROTOCOL. The CLI
-// knows how to resolve those via ClawHub. The CLI also writes plugins into
-// ~/.openclaw/extensions/<name>/ in the layout the gateway's plugin discovery
-// expects (#474), so we don't compute a destination directory here. See #505.
+// Going through the CLI (rather than raw `npm install`) is required because
+// it writes plugins into ~/.openclaw/extensions/<name>/ in the layout the
+// gateway's plugin discovery expects (#474). First-party ClawHub plugins
+// (e.g. `@openclaw/matrix`) also use `workspace:*` dependency markers that
+// raw npm rejects with EUNSUPPORTEDPROTOCOL (#505).
 func parsePluginEntry(entry string) string {
-	spec := entry
-	if after, ok := strings.CutPrefix(entry, "npm:"); ok {
-		spec = after
+	if pkg, ok := strings.CutPrefix(entry, "npm:"); ok {
+		return fmt.Sprintf("openclaw plugins install %s", shellQuote("npm:"+pkg))
 	}
-	return fmt.Sprintf("openclaw plugins install %s", shellQuote("clawhub:"+spec))
+	return fmt.Sprintf("openclaw plugins install %s", shellQuote("clawhub:"+entry))
 }
 
 // BuildPluginsScript generates the shell script for the plugins init container.
