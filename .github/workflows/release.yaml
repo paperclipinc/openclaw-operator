@@ -18,6 +18,16 @@ jobs:
       id-token: write  # For signing
 
     steps:
+      # Mint a short-lived App installation token to use for actions that
+      # need to trigger downstream workflows (release.yaml's events from
+      # GITHUB_TOKEN don't fan-out). Replaces the long-lived
+      # RELEASE_PLEASE_TOKEN PAT that was previously stored as a secret.
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -100,7 +110,7 @@ jobs:
           # PAT required: events from GITHUB_TOKEN don't trigger other
           # workflows. Using PAT ensures the release:published event
           # fires the OperatorHub submission workflow.
-          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh release edit "${{ github.ref_name }}" --draft=false
 
   helm-release:
