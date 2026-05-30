@@ -6252,7 +6252,7 @@ func TestParsePluginEntry_Basic(t *testing.T) {
 
 func TestParsePluginEntry_WithNpmPrefix(t *testing.T) {
 	got := parsePluginEntry("npm:@openclaw/some-plugin")
-	want := "openclaw plugins install 'clawhub:@openclaw/some-plugin'"
+	want := "openclaw plugins install 'npm:@openclaw/some-plugin'"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -6272,7 +6272,7 @@ func TestParsePluginEntry_Versioned(t *testing.T) {
 	}{
 		{"brave-plugin@1.2.3", "openclaw plugins install 'clawhub:brave-plugin@1.2.3'"},
 		{"@openclaw/brave-plugin@1.2.3", "openclaw plugins install 'clawhub:@openclaw/brave-plugin@1.2.3'"},
-		{"npm:@openclaw/brave-plugin@1.2.3", "openclaw plugins install 'clawhub:@openclaw/brave-plugin@1.2.3'"},
+		{"npm:@openclaw/brave-plugin@1.2.3", "openclaw plugins install 'npm:@openclaw/brave-plugin@1.2.3'"},
 	}
 	for _, c := range cases {
 		if got := parsePluginEntry(c.entry); got != c.want {
