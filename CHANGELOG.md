@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.6](https://github.com/paperclipinc/openclaw-operator/compare/v0.34.5...v0.34.6) (2026-05-26)
+
+
+### Bug Fixes
+
+* **ci:** operatorhub workflow gh repo fork CLI syntax ([#515](https://github.com/paperclipinc/openclaw-operator/issues/515)) ([6be0b90](https://github.com/paperclipinc/openclaw-operator/commit/6be0b909322cf9a8a715fdf5b586345301c2141c))
+
 ## [0.34.5](https://github.com/paperclipinc/openclaw-operator/compare/v0.34.4...v0.34.5) (2026-05-26)
 
 
