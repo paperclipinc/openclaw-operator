@@ -37,6 +37,10 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 sync-chart-crds: manifests ## Sync CRDs from config/crd/bases/ into Helm chart templates.
 	bash hack/sync-chart-crds.sh
 
+.PHONY: sync-bundle-crds
+sync-bundle-crds: manifests ## Sync CRDs from config/crd/bases/ into the OLM bundle.
+	bash hack/sync-bundle-crds.sh
+
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
