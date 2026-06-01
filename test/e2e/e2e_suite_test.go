@@ -1,5 +1,5 @@
 /*
-Copyright 2026 OpenClaw.rocks
+Copyright 2026 Paperclip Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -42,8 +42,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	openclawv1alpha1 "github.com/openclawrocks/openclaw-operator/api/v1alpha1"
-	"github.com/openclawrocks/openclaw-operator/internal/resources"
+	openclawv1alpha1 "github.com/paperclipinc/openclaw-operator/api/v1alpha1"
+	"github.com/paperclipinc/openclaw-operator/internal/resources"
 )
 
 var (

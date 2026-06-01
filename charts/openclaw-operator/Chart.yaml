@@ -15,7 +15,7 @@ keywords:
   - llm
   - automation
   - agent
-home: https://github.com/paperclipinc/openclaw-operator
+home: https://paperclip.inc
 icon: https://raw.githubusercontent.com/paperclipinc/openclaw-operator/main/docs-site/docs/assets/logo.svg
 sources:
   - https://github.com/paperclipinc/openclaw-operator
@@ -32,9 +32,9 @@ annotations:
   artifacthub.io/prerelease: 'false'
   artifacthub.io/links: |
     - name: Website
-      url: https://github.com/paperclipinc/openclaw-operator
+      url: https://paperclip.inc
     - name: Documentation
-      url: https://github.com/paperclipinc/openclaw-operator/tree/main/docs
+      url: https://paperclip.inc/docs/operators/openclaw
     - name: OperatorHub
       url: https://operatorhub.io/operator/openclaw-operator
     - name: Artifact Hub

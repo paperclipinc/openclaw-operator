@@ -1,5 +1,5 @@
 /*
-Copyright 2026 OpenClaw.rocks
+Copyright 2026 Paperclip Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openclawrocks/openclaw-operator/internal/resources"
+	"github.com/paperclipinc/openclaw-operator/internal/resources"
 )
 
 const defaultBaseURL = "https://api.github.com"

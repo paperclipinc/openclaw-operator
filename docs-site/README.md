@@ -40,9 +40,8 @@ run `make api-docs` and commit the result in the same PR.
 
 `docs.yaml` workflow fires on every `release: published` event. It checks
 out the released tag, runs `mike deploy <minor> latest`, and pushes to
-`gh-pages`. GH Pages serves the result at
-`docs-operator.openclaw.rocks`, and Caddy on the openclaw.rocks box
-reverse-proxies `paperclipinc.github.io/openclaw-operator/*` to it.
+`gh-pages`. The public paperclip.inc site reverse-proxies
+`paperclipinc.github.io/openclaw-operator/*` to `paperclip.inc/docs/operators/openclaw`.
 
 ## Republishing a specific tag manually
 

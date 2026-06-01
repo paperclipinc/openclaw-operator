@@ -1,5 +1,5 @@
 /*
-Copyright 2026 OpenClaw.rocks
+Copyright 2026 Paperclip Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	openclawv1alpha1 "github.com/openclawrocks/openclaw-operator/api/v1alpha1"
+	openclawv1alpha1 "github.com/paperclipinc/openclaw-operator/api/v1alpha1"
 )
 
 // BuildService creates a Service for the OpenClawInstance

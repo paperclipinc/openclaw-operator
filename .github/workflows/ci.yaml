@@ -39,7 +39,7 @@ jobs:
           # Detect bare r.Update/r.Create calls in the controller that bypass
           # controllerutil.CreateOrUpdate. Only r.Update(ctx, instance) and
           # r.Status().Update(ctx, instance) are allowed (CR-level updates).
-          # See: https://github.com/openclaw-rocks/openclaw-operator/issues/28
+          # See: https://github.com/paperclipinc/openclaw-operator/issues/28
           VIOLATIONS=$(grep -n 'r\.Update(ctx,' internal/controller/openclawinstance_controller.go \
             | grep -v 'instance)' \
             | grep -v '// reconcile-guard:allow' || true)

@@ -12,14 +12,14 @@
 
 **Self-host [OpenClaw](https://openclaw.ai) AI agents on Kubernetes with production-grade security, observability, and lifecycle management.**
 
-OpenClaw is an AI agent platform that acts on your behalf across Telegram, Discord, WhatsApp, and Signal. It manages your inbox, calendar, smart home, and more through 50+ integrations. While [Paperclip Inc.](https://github.com/paperclipinc) offers fully managed hosting, this operator lets you run OpenClaw on your own infrastructure with the same operational rigor.
+OpenClaw is an AI agent platform that acts on your behalf across Telegram, Discord, WhatsApp, and Signal. It manages your inbox, calendar, smart home, and more through 50+ integrations. While [Paperclip Inc.](https://paperclip.inc) offers fully managed hosting, this operator lets you run OpenClaw on your own infrastructure with the same operational rigor.
 
 > **Migration notice (May 2026):** This project moved from the `openclaw-rocks` GitHub org to **`paperclipinc`**. The container registry and Helm chart OCI path changed accordingly:
 >
 > | | Old (no longer available) | New |
 > |---|---|---|
-> | Helm chart | `oci://ghcr.io/openclaw-rocks/charts/openclaw-operator` | `oci://ghcr.io/paperclipinc/charts/openclaw-operator` |
-> | Container image | `ghcr.io/openclaw-rocks/openclaw-operator` | `ghcr.io/paperclipinc/openclaw-operator` |
+> | Helm chart | `oci://ghcr.io/paperclipinc/charts/openclaw-operator` | `oci://ghcr.io/paperclipinc/charts/openclaw-operator` |
+> | Container image | `ghcr.io/paperclipinc/openclaw-operator` | `ghcr.io/paperclipinc/openclaw-operator` |
 >
 > If you pin the image in your values, update `image.repository` to `ghcr.io/paperclipinc/openclaw-operator`.
 > CRD API group (`openclaw.rocks/v1alpha1`) is unchanged — no cluster-side migration needed.
@@ -1121,7 +1121,7 @@ spec:
         enabled: true
         labels:
           release: kube-prometheus-stack  # must match Prometheus ruleSelector
-        runbookBaseURL: https://github.com/paperclipinc/openclaw-operator/tree/main/docs/runbooks  # default
+        runbookBaseURL: https://paperclip.inc/docs/operators/openclaw/runbooks  # default
 ```
 
 Alerts: `OpenClawReconcileErrors`, `OpenClawInstanceDegraded`, `OpenClawSlowReconciliation`, `OpenClawPodCrashLooping`, `OpenClawPodOOMKilled`, `OpenClawPVCNearlyFull`, `OpenClawAutoUpdateRollback`
@@ -1258,7 +1258,7 @@ Platform-specific deployment guides are available for:
 
 ```bash
 # Clone and set up
-git clone https://github.com/OpenClaw-rocks/openclaw-operator.git
+git clone https://github.com/paperclipinc/openclaw-operator.git
 cd openclaw-operator
 go mod download
 
@@ -1287,7 +1287,7 @@ See the full [roadmap](ROADMAP.md) for details.
 
 ## Don't Want to Self-Host?
 
-[Paperclip Inc.](https://github.com/paperclipinc) offers fully managed hosting starting at **EUR 15/mo**. No Kubernetes cluster required. Setup, updates, and 24/7 uptime handled for you.
+[Paperclip Inc.](https://paperclip.inc) offers fully managed hosting starting at **EUR 15/mo**. No Kubernetes cluster required. Setup, updates, and 24/7 uptime handled for you.
 
 ## Contributing
 

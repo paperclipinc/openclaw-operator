@@ -39,14 +39,14 @@ jobs:
           # Copy and version the CSV
           sed \
             -e "s/openclaw-operator\.v[0-9]\+\.[0-9]\+\.[0-9]\+/openclaw-operator.v${VERSION}/g" \
-            -e "s|ghcr.io/openclaw-rocks/openclaw-operator:v[0-9]\+\.[0-9]\+\.[0-9]\+|ghcr.io/openclaw-rocks/openclaw-operator:${TAG}|g" \
+            -e "s|ghcr.io/paperclipinc/openclaw-operator:v[0-9]\+\.[0-9]\+\.[0-9]\+|ghcr.io/paperclipinc/openclaw-operator:${TAG}|g" \
             -e "s/createdAt: .*/createdAt: \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"/" \
             -e "s/^  version: [0-9]\+\.[0-9]\+\.[0-9]\+/  version: ${VERSION}/" \
             bundle/manifests/openclaw-operator.v*.clusterserviceversion.yaml \
             > "${BUNDLE_DIR}/manifests/openclaw-operator.v${VERSION}.clusterserviceversion.yaml"
 
-          # Copy CRD and metadata as-is
-          cp bundle/manifests/openclaw.rocks_openclawinstances.yaml "${BUNDLE_DIR}/manifests/"
+          # Copy CRDs and metadata as-is (all owned CRDs, not just one)
+          cp bundle/manifests/openclaw.rocks_*.yaml "${BUNDLE_DIR}/manifests/"
           cp bundle/metadata/annotations.yaml "${BUNDLE_DIR}/metadata/"
 
           echo "Bundle prepared at ${BUNDLE_DIR}:"
@@ -96,14 +96,14 @@ jobs:
           ### Update to openclaw-operator
 
           **Version:** ${VERSION}
-          **Operator:** [OpenClaw Kubernetes Operator](https://github.com/openclaw-rocks/openclaw-operator)
+          **Operator:** [OpenClaw Kubernetes Operator](https://github.com/paperclipinc/openclaw-operator)
 
           #### Changes
-          See [release notes](https://github.com/openclaw-rocks/openclaw-operator/releases/tag/v${VERSION}).
+          See [release notes](https://github.com/paperclipinc/openclaw-operator/releases/tag/v${VERSION}).
 
           #### Testing
           - CI tests pass on the source repository
-          - Container image is published and signed at \`ghcr.io/openclaw-rocks/openclaw-operator:v${VERSION}\`
+          - Container image is published and signed at \`ghcr.io/paperclipinc/openclaw-operator:v${VERSION}\`
           EOF
           )"
           else

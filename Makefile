@@ -1,5 +1,5 @@
 # Image URL to use all building/pushing image targets
-IMG ?= ghcr.io/openclaw-rocks/openclaw-operator:latest
+IMG ?= ghcr.io/paperclipinc/openclaw-operator:latest
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.31.0
@@ -36,6 +36,10 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 .PHONY: sync-chart-crds
 sync-chart-crds: manifests ## Sync CRDs from config/crd/bases/ into Helm chart templates.
 	bash hack/sync-chart-crds.sh
+
+.PHONY: sync-bundle-crds
+sync-bundle-crds: manifests ## Sync CRDs from config/crd/bases/ into the OLM bundle.
+	bash hack/sync-bundle-crds.sh
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.

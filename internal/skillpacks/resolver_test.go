@@ -1,5 +1,5 @@
 /*
-Copyright 2026 OpenClaw.rocks
+Copyright 2026 Paperclip Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/openclawrocks/openclaw-operator/internal/resources"
+	"github.com/paperclipinc/openclaw-operator/internal/resources"
 )
 
 // ghFile returns a GitHub Contents API JSON response for a file.
@@ -53,10 +53,10 @@ func TestParsePackRef(t *testing.T) {
 		ref     string
 		wantErr bool
 	}{
-		{"openclaw-rocks/skills/image-gen", "openclaw-rocks", "skills", "image-gen", "", false},
-		{"openclaw-rocks/skills/image-gen@v1.0.0", "openclaw-rocks", "skills", "image-gen", "v1.0.0", false},
+		{"paperclipinc/skills/image-gen", "paperclipinc", "skills", "image-gen", "", false},
+		{"paperclipinc/skills/image-gen@v1.0.0", "paperclipinc", "skills", "image-gen", "v1.0.0", false},
 		{"myorg/private-skills/custom-tool@main", "myorg", "private-skills", "custom-tool", "main", false},
-		{"openclaw-rocks/skills/nested/deep/path@abc123", "openclaw-rocks", "skills", "nested/deep/path", "abc123", false},
+		{"paperclipinc/skills/nested/deep/path@abc123", "paperclipinc", "skills", "nested/deep/path", "abc123", false},
 		{"owner/repo", "", "", "", "", true},
 		{"invalid", "", "", "", "", true},
 	}

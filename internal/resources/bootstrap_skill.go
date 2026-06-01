@@ -1,5 +1,5 @@
 /*
-Copyright 2026 OpenClaw.rocks
+Copyright 2026 Paperclip Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ limitations under the License.
 package resources
 
 import (
-	openclawv1alpha1 "github.com/openclawrocks/openclaw-operator/api/v1alpha1"
+	openclawv1alpha1 "github.com/paperclipinc/openclaw-operator/api/v1alpha1"
 )
 
 // bootstrapEnabled reports whether the operator should inject BOOTSTRAP.md
