@@ -5379,7 +5379,7 @@ spec:
                               for Prometheus rule selector matching)
                             type: object
                           runbookBaseURL:
-                            default: https://openclaw.rocks/docs/runbooks
+                            default: https://paperclip.inc/docs/operators/openclaw/runbooks
                             description: RunbookBaseURL is the base URL for alert
                               runbook links
                             type: string

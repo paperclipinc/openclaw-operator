@@ -1,5 +1,5 @@
 /*
-Copyright 2026 OpenClaw.rocks
+Copyright 2026 Paperclip Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -829,7 +829,7 @@ var _ = Describe("Chromium Full Integration Tests", Ordered, func() {
 	// reliable in CI. The Tier 1 and Tier 2 CDP tests already validate the browser
 	// pipeline (CDP connectivity + screenshot via direct WebSocket commands).
 	// Run manually with: E2E_RUN_LLM_INTEGRATION=true go test ./test/e2e/... -run "agent pipeline"
-	It("Should take a screenshot of openclaw.rocks via the agent pipeline", func() {
+	It("Should take a screenshot of paperclip.inc via the agent pipeline", func() {
 		if os.Getenv("E2E_RUN_LLM_INTEGRATION") != "true" {
 			Skip("Skipping LLM integration test (set E2E_RUN_LLM_INTEGRATION=true to run)")
 		}
@@ -922,7 +922,7 @@ var _ = Describe("Chromium Full Integration Tests", Ordered, func() {
 		Expect(sessionKey).NotTo(BeEmpty(), "connect response should contain mainSessionKey")
 		GinkgoWriter.Printf("Session key: %s\n", sessionKey)
 
-		By("Sending message to take a screenshot of openclaw.rocks")
+		By("Sending message to take a screenshot of paperclip.inc")
 		sendID := randomHex()
 		idempotencyKey := randomHex()
 		sendReq := map[string]interface{}{
@@ -930,7 +930,7 @@ var _ = Describe("Chromium Full Integration Tests", Ordered, func() {
 			"id":     sendID,
 			"method": "chat.send",
 			"params": map[string]interface{}{
-				"message":        "Navigate to https://openclaw.rocks and take a screenshot. Use the browser tool with the default profile.",
+				"message":        "Navigate to https://paperclip.inc and take a screenshot. Use the browser tool with the default profile.",
 				"sessionKey":     sessionKey,
 				"idempotencyKey": idempotencyKey,
 			},
