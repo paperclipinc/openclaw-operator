@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.7](https://github.com/paperclipinc/openclaw-operator/compare/v0.34.6...v0.34.7) (2026-06-01)
+
+
+### Bug Fixes
+
+* **olm:** ship all three CRDs in the OperatorHub bundle ([842f736](https://github.com/paperclipinc/openclaw-operator/commit/842f73674e7475c8168ce557c2ff138233a687e8))
+
+
+### Refactoring
+
+* complete openclaw-rocks -&gt; paperclipinc migration ([60d9f9e](https://github.com/paperclipinc/openclaw-operator/commit/60d9f9e14146c9f594fd5eef8008393a6a72ba1b))
+
 ## [0.34.6](https://github.com/paperclipinc/openclaw-operator/compare/v0.34.5...v0.34.6) (2026-05-26)
 
 
