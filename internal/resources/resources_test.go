@@ -1,5 +1,5 @@
 /*
-Copyright 2026 OpenClaw.rocks
+Copyright 2026 Paperclip Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -9770,7 +9770,7 @@ func TestBuildPrometheusRule(t *testing.T) {
 		if !ok || runbook == "" {
 			t.Errorf("rule %d missing runbook_url", i)
 		}
-		if !strings.HasPrefix(runbook, "https://openclaw.rocks/docs/runbooks/") {
+		if !strings.HasPrefix(runbook, "https://paperclip.inc/docs/operators/openclaw/runbooks/") {
 			t.Errorf("rule %d runbook_url = %q, expected default base URL", i, runbook)
 		}
 	}

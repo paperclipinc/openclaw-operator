@@ -8,7 +8,7 @@ metadata:
     categories: "AI/Machine Learning, Developer Tools, Application Runtime"
     containerImage: ghcr.io/paperclipinc/openclaw-operator:v0.9.0
     createdAt: "2026-02-11T00:00:00Z"
-    support: OpenClaw.rocks
+    support: Paperclip Inc.
     repository: https://github.com/paperclipinc/openclaw-operator
     description: "A production-grade Kubernetes operator for deploying and managing OpenClaw AI agent instances with auto-updates, backup/restore, and security hardening."
     alm-examples: |-
@@ -112,6 +112,35 @@ metadata:
               }
             }
           }
+        },
+        {
+          "apiVersion": "openclaw.rocks/v1alpha1",
+          "kind": "OpenClawSelfConfig",
+          "metadata": {
+            "name": "add-image-gen-skill",
+            "namespace": "default"
+          },
+          "spec": {
+            "instanceRef": "my-openclaw",
+            "addSkills": [
+              "image-gen"
+            ]
+          }
+        },
+        {
+          "apiVersion": "openclaw.rocks/v1alpha1",
+          "kind": "OpenClawClusterDefaults",
+          "metadata": {
+            "name": "cluster"
+          },
+          "spec": {
+            "image": {
+              "tag": "v0.28.0"
+            },
+            "runtimeDeps": {
+              "python": true
+            }
+          }
         }
       ]
     features.operators.openshift.io/disconnected: "false"
@@ -177,7 +206,7 @@ spec:
     - Kubernetes 1.28+
 
     For full documentation, visit the
-    [OpenClaw Operator docs](https://openclaw.rocks/docs/operator/0.10).
+    [OpenClaw Operator docs](https://paperclip.inc/docs/operators/openclaw).
   maturity: alpha
   version: 0.9.0
   minKubeVersion: 1.28.0
@@ -195,15 +224,15 @@ spec:
     - machine-learning
   maintainers:
     - name: Jannes Stubbemann
-      email: jannes@openclaw.rocks
+      email: jannes@paperclip.inc
   provider:
-    name: OpenClaw.rocks
-    url: https://openclaw.rocks
+    name: Paperclip Inc.
+    url: https://paperclip.inc
   links:
     - name: Website
-      url: https://openclaw.rocks
+      url: https://paperclip.inc
     - name: Operator Documentation
-      url: https://openclaw.rocks/docs/operator/0.10
+      url: https://paperclip.inc/docs/operators/openclaw
     - name: API Reference
       url: https://github.com/paperclipinc/openclaw-operator/blob/main/docs/api-reference.md
     - name: GitHub Repository
@@ -392,6 +421,16 @@ spec:
             version: v1
           - kind: Job
             version: v1
+      - name: openclawselfconfigs.openclaw.rocks
+        version: v1alpha1
+        kind: OpenClawSelfConfig
+        displayName: OpenClaw Self Config
+        description: Namespaced request that lets an OpenClaw agent propose scoped, operator-gated changes to its own OpenClawInstance (skills, env vars, workspace files, config patch).
+      - name: openclawclusterdefaults.openclaw.rocks
+        version: v1alpha1
+        kind: OpenClawClusterDefaults
+        displayName: OpenClaw Cluster Defaults
+        description: Cluster-scoped singleton (named "cluster") whose spec is merged into every OpenClawInstance at reconcile time; per-instance fields always win.
   install:
     strategy: deployment
     spec:
