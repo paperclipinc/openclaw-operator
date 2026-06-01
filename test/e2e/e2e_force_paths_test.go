@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	openclawv1alpha1 "github.com/openclawrocks/openclaw-operator/api/v1alpha1"
+	openclawv1alpha1 "github.com/paperclipinc/openclaw-operator/api/v1alpha1"
 )
 
 // E2E coverage for spec.config.forcePaths (#500).
@@ -257,7 +257,8 @@ func summarizeStatuses(statuses []corev1.ContainerStatus) string {
 		return "[]"
 	}
 	parts := make([]string, 0, len(statuses))
-	for _, cs := range statuses {
+	for i := range statuses {
+		cs := &statuses[i]
 		s := cs.Name + "="
 		switch {
 		case cs.State.Waiting != nil:

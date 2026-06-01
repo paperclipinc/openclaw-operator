@@ -729,11 +729,16 @@ func BuildInitScript(instance *openclawv1alpha1.OpenClawInstance, externalWorksp
 			// tenant-isolation lever for managed multi-tenant deployments: it
 			// lets channels.* (user-owned) survive restarts while keeping
 			// gateway.*, models.providers.*, etc rebuilt from the CR.
+			//
+			// dp(o,p) deletes a dot-path from an object. Its typeof check
+			// treats arrays as objects (typeof [] === "object") and descends
+			// into them; harmless here because the operator-controlled config
+			// schema has no arrays at forcePath-eligible depths.
 			lines = append(lines, fmt.Sprintf(
 				`__cfgpath=/config/%s __forcepaths=%s node -e '`+
 					`const fs=require("fs");`+
 					`function dm(a,b){const r={...a};for(const k in b){r[k]=b[k]&&typeof b[k]==="object"&&!Array.isArray(b[k])&&r[k]&&typeof r[k]==="object"&&!Array.isArray(r[k])?dm(r[k],b[k]):b[k]}return r}`+
-					`function dp(o,p){const k=p.split(".");let c=o;for(let i=0;i<k.length-1;i++){if(!c[k[i]]||typeof c[k[i]]!=="object")return;c=c[k[i]]}delete c[k[k.length-1]]}`+
+					`function dp(o,p){const k=p.split(".");let c=o;for(let i=0;i<k.length-1;i++){if(!c[k[i]]||typeof c[k[i]]!=="object")return;c=c[k[i]]}delete c[k[k.length-1]]}`+ // dp descends into arrays (typeof []==="object") -- harmless: operator schema has no arrays at forcePath depths
 					`const e="/data/openclaw.json",c=process.env.__cfgpath,t="/tmp/merged.json";`+
 					`const base=fs.existsSync(e)?JSON.parse(fs.readFileSync(e,"utf8")):{};`+
 					`const fp=JSON.parse(process.env.__forcepaths);`+
@@ -2587,11 +2592,14 @@ func buildConfigRestoreCommand(instance *openclawv1alpha1.OpenClawInstance) stri
 		// forcePaths handling must match the init script -- otherwise an
 		// attacker could persist a rogue subtree across a container restart
 		// (which does not re-run init containers) and bypass tenant isolation.
+		//
+		// dp(o,p) treats arrays as objects (typeof [] === "object"); harmless
+		// given the operator-controlled schema has no arrays at these depths.
 		return fmt.Sprintf(
 			`__forcepaths=%s node -e '`+
 				`const fs=require("fs");`+
 				`function dm(a,b){const r={...a};for(const k in b){r[k]=b[k]&&typeof b[k]==="object"&&!Array.isArray(b[k])&&r[k]&&typeof r[k]==="object"&&!Array.isArray(r[k])?dm(r[k],b[k]):b[k]}return r}`+
-				`function dp(o,p){const k=p.split(".");let c=o;for(let i=0;i<k.length-1;i++){if(!c[k[i]]||typeof c[k[i]]!=="object")return;c=c[k[i]]}delete c[k[k.length-1]]}`+
+				`function dp(o,p){const k=p.split(".");let c=o;for(let i=0;i<k.length-1;i++){if(!c[k[i]]||typeof c[k[i]]!=="object")return;c=c[k[i]]}delete c[k[k.length-1]]}`+ // dp descends into arrays (typeof []==="object") -- harmless: operator schema has no arrays at forcePath depths
 				`const e="%s",c="%s",t="/tmp/merged.json";`+
 				`const base=fs.existsSync(e)?JSON.parse(fs.readFileSync(e,"utf8")):{};`+
 				`const fp=JSON.parse(process.env.__forcepaths);`+
