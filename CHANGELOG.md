@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.7](https://github.com/paperclipinc/openclaw-operator/compare/v0.34.6...v0.34.7) (2026-06-01)
+
+
+### Bug Fixes
+
+* **olm:** ship all three CRDs in the OperatorHub bundle ([842f736](https://github.com/paperclipinc/openclaw-operator/commit/842f73674e7475c8168ce557c2ff138233a687e8))
+
+
+### Refactoring
+
+* complete openclaw-rocks -&gt; paperclipinc migration ([60d9f9e](https://github.com/paperclipinc/openclaw-operator/commit/60d9f9e14146c9f594fd5eef8008393a6a72ba1b))
+
 ## [0.34.6](https://github.com/paperclipinc/openclaw-operator/compare/v0.34.5...v0.34.6) (2026-05-26)
 
 
@@ -723,8 +735,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Specify kind cluster name for image loading ([7ac2116](https://github.com/paperclipinc/openclaw-operator/commit/7ac21166b36e79fb0d93c23eb24de8c420dd8446))
 * update banner alt text ([#38](https://github.com/paperclipinc/openclaw-operator/issues/38)) ([d00dc23](https://github.com/paperclipinc/openclaw-operator/commit/d00dc23516d79e6a95b6aeca9d5d29c1a777e0e6))
 * Update Chart.yaml version/appVersion to match latest release v0.2.4 ([#26](https://github.com/paperclipinc/openclaw-operator/issues/26)) ([c475ffc](https://github.com/paperclipinc/openclaw-operator/commit/c475ffcd145b5109befb784a1a92672377be8936))
-* Update copyright to 2026 OpenClaw.rocks ([bca1f0f](https://github.com/paperclipinc/openclaw-operator/commit/bca1f0f626ebd8c7c1285882d20b87483380fba4))
-* Update copyright to 2026 OpenClaw.rocks ([4d462f9](https://github.com/paperclipinc/openclaw-operator/commit/4d462f97799865f48c13525074702f4b1163e54f))
+* Update copyright to 2026 Paperclip Inc. ([bca1f0f](https://github.com/paperclipinc/openclaw-operator/commit/bca1f0f626ebd8c7c1285882d20b87483380fba4))
+* Update copyright to 2026 Paperclip Inc. ([4d462f9](https://github.com/paperclipinc/openclaw-operator/commit/4d462f97799865f48c13525074702f4b1163e54f))
 * Update Go version to 1.24 for CI compatibility ([5c13d06](https://github.com/paperclipinc/openclaw-operator/commit/5c13d068f3cba6d19609a3ea78b237d4b0b311ff))
 * Use correct GitHub org name (OpenClaw-rocks) in all references ([#20](https://github.com/paperclipinc/openclaw-operator/issues/20)) ([c157899](https://github.com/paperclipinc/openclaw-operator/commit/c1578998cb7bfb4824eae64ce390fba4e508e6ca))
 * Use direct append instead of loop for image pull secrets ([187477c](https://github.com/paperclipinc/openclaw-operator/commit/187477c3e205ddf332bd9f2831936d141b1e4088))
@@ -778,8 +790,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Specify kind cluster name for image loading ([7ac2116](https://github.com/paperclipinc/openclaw-operator/commit/7ac21166b36e79fb0d93c23eb24de8c420dd8446))
 * update banner alt text ([#38](https://github.com/paperclipinc/openclaw-operator/issues/38)) ([d00dc23](https://github.com/paperclipinc/openclaw-operator/commit/d00dc23516d79e6a95b6aeca9d5d29c1a777e0e6))
 * Update Chart.yaml version/appVersion to match latest release v0.2.4 ([#26](https://github.com/paperclipinc/openclaw-operator/issues/26)) ([c475ffc](https://github.com/paperclipinc/openclaw-operator/commit/c475ffcd145b5109befb784a1a92672377be8936))
-* Update copyright to 2026 OpenClaw.rocks ([bca1f0f](https://github.com/paperclipinc/openclaw-operator/commit/bca1f0f626ebd8c7c1285882d20b87483380fba4))
-* Update copyright to 2026 OpenClaw.rocks ([4d462f9](https://github.com/paperclipinc/openclaw-operator/commit/4d462f97799865f48c13525074702f4b1163e54f))
+* Update copyright to 2026 Paperclip Inc. ([bca1f0f](https://github.com/paperclipinc/openclaw-operator/commit/bca1f0f626ebd8c7c1285882d20b87483380fba4))
+* Update copyright to 2026 Paperclip Inc. ([4d462f9](https://github.com/paperclipinc/openclaw-operator/commit/4d462f97799865f48c13525074702f4b1163e54f))
 * Update Go version to 1.24 for CI compatibility ([5c13d06](https://github.com/paperclipinc/openclaw-operator/commit/5c13d068f3cba6d19609a3ea78b237d4b0b311ff))
 * Use correct GitHub org name (OpenClaw-rocks) in all references ([#20](https://github.com/paperclipinc/openclaw-operator/issues/20)) ([c157899](https://github.com/paperclipinc/openclaw-operator/commit/c1578998cb7bfb4824eae64ce390fba4e508e6ca))
 * Use direct append instead of loop for image pull secrets ([187477c](https://github.com/paperclipinc/openclaw-operator/commit/187477c3e205ddf332bd9f2831936d141b1e4088))

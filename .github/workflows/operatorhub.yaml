@@ -45,8 +45,8 @@ jobs:
             bundle/manifests/openclaw-operator.v*.clusterserviceversion.yaml \
             > "${BUNDLE_DIR}/manifests/openclaw-operator.v${VERSION}.clusterserviceversion.yaml"
 
-          # Copy CRD and metadata as-is
-          cp bundle/manifests/openclaw.rocks_openclawinstances.yaml "${BUNDLE_DIR}/manifests/"
+          # Copy CRDs and metadata as-is (all owned CRDs, not just one)
+          cp bundle/manifests/openclaw.rocks_*.yaml "${BUNDLE_DIR}/manifests/"
           cp bundle/metadata/annotations.yaml "${BUNDLE_DIR}/metadata/"
 
           echo "Bundle prepared at ${BUNDLE_DIR}:"

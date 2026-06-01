@@ -93,15 +93,8 @@
     <line x1="60" y1="-10" x2="60" y2="-14" stroke="#FFD700" stroke-width="1.5"/>
     <line x1="57" y1="-13" x2="63" y2="-13" stroke="#FFD700" stroke-width="1.5"/>
 
-    <!-- Left sunglasses lens -->
-    <path d="M30 32 L52 32 L52 42 Q52 46 48 46 L34 46 Q30 46 30 42 Z" fill="#0a0a0b"/>
-    <!-- Right sunglasses lens -->
-    <path d="M68 32 L90 32 L90 42 Q90 46 86 46 L72 46 Q68 46 68 42 Z" fill="#0a0a0b"/>
-    <!-- Sunglasses bridge -->
-    <path d="M52 36 L68 36" stroke="#0a0a0b" stroke-width="3"/>
-    <!-- Lens reflections -->
-    <rect x="32" y="34" width="6" height="2" fill="#fafafa" opacity="0.3" rx="1"/>
-    <rect x="70" y="34" width="6" height="2" fill="#fafafa" opacity="0.3" rx="1"/>
+    <circle cx="41" cy="38" r="4" fill="#0a0a0b"/>
+    <circle cx="79" cy="38" r="4" fill="#0a0a0b"/>
 
     <!-- Happy mouth -->
     <path d="M48 60 Q60 70 72 60" fill="none" stroke="#991b1b" stroke-width="2" stroke-linecap="round"/>
@@ -128,12 +121,9 @@
     <!-- Antennae -->
     <path d="M45 15 Q35 5 30 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/>
     <path d="M75 15 Q85 5 90 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/>
-    <!-- Sunglasses -->
-    <path d="M30 32 L52 32 L52 42 Q52 46 48 46 L34 46 Q30 46 30 42 Z" fill="#0a0a0b"/>
-    <path d="M68 32 L90 32 L90 42 Q90 46 86 46 L72 46 Q68 46 68 42 Z" fill="#0a0a0b"/>
-    <path d="M52 36 L68 36" stroke="#0a0a0b" stroke-width="3"/>
-    <rect x="32" y="34" width="6" height="2" fill="#fafafa" opacity="0.3" rx="1"/>
-    <rect x="70" y="34" width="6" height="2" fill="#fafafa" opacity="0.3" rx="1"/>
+    <!-- Eyes -->
+    <circle cx="41" cy="38" r="4" fill="#0a0a0b"/>
+    <circle cx="79" cy="38" r="4" fill="#0a0a0b"/>
     <!-- Smile -->
     <path d="M48 60 Q60 70 72 60" fill="none" stroke="#991b1b" stroke-width="2" stroke-linecap="round"/>
   </g>
@@ -148,12 +138,9 @@
     <!-- Antennae -->
     <path d="M45 15 Q35 5 30 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/>
     <path d="M75 15 Q85 5 90 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/>
-    <!-- Sunglasses -->
-    <path d="M30 32 L52 32 L52 42 Q52 46 48 46 L34 46 Q30 46 30 42 Z" fill="#0a0a0b"/>
-    <path d="M68 32 L90 32 L90 42 Q90 46 86 46 L72 46 Q68 46 68 42 Z" fill="#0a0a0b"/>
-    <path d="M52 36 L68 36" stroke="#0a0a0b" stroke-width="3"/>
-    <rect x="32" y="34" width="6" height="2" fill="#fafafa" opacity="0.3" rx="1"/>
-    <rect x="70" y="34" width="6" height="2" fill="#fafafa" opacity="0.3" rx="1"/>
+    <!-- Eyes -->
+    <circle cx="41" cy="38" r="4" fill="#0a0a0b"/>
+    <circle cx="79" cy="38" r="4" fill="#0a0a0b"/>
     <!-- Smile -->
     <path d="M48 60 Q60 70 72 60" fill="none" stroke="#991b1b" stroke-width="2" stroke-linecap="round"/>
   </g>
@@ -165,9 +152,8 @@
     <path d="M100 45 C115 40 120 50 115 60 C110 70 100 65 95 55 C92 48 95 45 100 45Z" fill="url(#lobster)" opacity="0.8"/>
     <path d="M45 15 Q35 5 30 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/>
     <path d="M75 15 Q85 5 90 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/>
-    <path d="M30 32 L52 32 L52 42 Q52 46 48 46 L34 46 Q30 46 30 42 Z" fill="#0a0a0b"/>
-    <path d="M68 32 L90 32 L90 42 Q90 46 86 46 L72 46 Q68 46 68 42 Z" fill="#0a0a0b"/>
-    <path d="M52 36 L68 36" stroke="#0a0a0b" stroke-width="3"/>
+    <circle cx="41" cy="38" r="4" fill="#0a0a0b"/>
+    <circle cx="79" cy="38" r="4" fill="#0a0a0b"/>
   </g>
 
   <!-- === Small lobster 4 (in the water on the right) === -->
@@ -177,9 +163,8 @@
     <path d="M100 45 C115 40 120 50 115 60 C110 70 100 65 95 55 C92 48 95 45 100 45Z" fill="url(#lobster)" opacity="0.7"/>
     <path d="M45 15 Q35 5 30 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/>
     <path d="M75 15 Q85 5 90 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/>
-    <path d="M30 32 L52 32 L52 42 Q52 46 48 46 L34 46 Q30 46 30 42 Z" fill="#0a0a0b"/>
-    <path d="M68 32 L90 32 L90 42 Q90 46 86 46 L72 46 Q68 46 68 42 Z" fill="#0a0a0b"/>
-    <path d="M52 36 L68 36" stroke="#0a0a0b" stroke-width="3"/>
+    <circle cx="41" cy="38" r="4" fill="#0a0a0b"/>
+    <circle cx="79" cy="38" r="4" fill="#0a0a0b"/>
   </g>
 
   <!-- Moon reflection on water -->

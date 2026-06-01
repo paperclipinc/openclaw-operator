@@ -1015,6 +1015,44 @@ spec:
                             x-kubernetes-list-type: atomic
                         type: object
                     type: object
+                  autoScaling:
+                    description: AutoScaling configures horizontal pod auto-scaling
+                    properties:
+                      enabled:
+                        default: false
+                        description: Enabled enables HorizontalPodAutoscaler creation
+                        type: boolean
+                      maxReplicas:
+                        default: 5
+                        description: MaxReplicas is the upper limit for the number
+                          of replicas
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      minReplicas:
+                        default: 1
+                        description: MinReplicas is the lower limit for the number
+                          of replicas
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      targetCPUUtilization:
+                        default: 80
+                        description: TargetCPUUtilization is the target average CPU
+                          utilization (percentage)
+                        format: int32
+                        maximum: 100
+                        minimum: 1
+                        type: integer
+                      targetMemoryUtilization:
+                        description: |-
+                          TargetMemoryUtilization is the target average memory utilization (percentage).
+                          When not set, only CPU-based scaling is used.
+                        format: int32
+                        maximum: 100
+                        minimum: 1
+                        type: integer
+                    type: object
                   nodeSelector:
                     additionalProperties:
                       type: string
@@ -1035,6 +1073,14 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  runtimeClassName:
+                    description: |-
+                      RuntimeClassName refers to a RuntimeClass object in the cluster,
+                      which should be used to run this pod.
+                      If no RuntimeClass resource matches the named class, the pod will not be run.
+                      If unset or empty, the default container runtime is used.
+                      More info: https://kubernetes.io/docs/concepts/containers/runtime-class/
+                    type: string
                   tolerations:
                     description: Tolerations are tolerations for pod scheduling
                     items:
@@ -1074,6 +1120,238 @@ spec:
                           type: string
                       type: object
                     type: array
+                  topologySpreadConstraints:
+                    description: TopologySpreadConstraints describes how pods should
+                      spread across topology domains
+                    items:
+                      description: TopologySpreadConstraint specifies how to spread
+                        matching pods among the given topology.
+                      properties:
+                        labelSelector:
+                          description: |-
+                            LabelSelector is used to find matching pods.
+                            Pods that match this label selector are counted to determine the number of pods
+                            in their corresponding topology domain.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        matchLabelKeys:
+                          description: |-
+                            MatchLabelKeys is a set of pod label keys to select the pods over which
+                            spreading will be calculated. The keys are used to lookup values from the
+                            incoming pod labels, those key-value labels are ANDed with labelSelector
+                            to select the group of existing pods over which spreading will be calculated
+                            for the incoming pod. The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
+                            MatchLabelKeys cannot be set when LabelSelector isn't set.
+                            Keys that don't exist in the incoming pod labels will
+                            be ignored. A null or empty list means only match against labelSelector.
+
+                            This is a beta field and requires the MatchLabelKeysInPodTopologySpread feature gate to be enabled (enabled by default).
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        maxSkew:
+                          description: |-
+                            MaxSkew describes the degree to which pods may be unevenly distributed.
+                            When `whenUnsatisfiable=DoNotSchedule`, it is the maximum permitted difference
+                            between the number of matching pods in the target topology and the global minimum.
+                            The global minimum is the minimum number of matching pods in an eligible domain
+                            or zero if the number of eligible domains is less than MinDomains.
+                            For example, in a 3-zone cluster, MaxSkew is set to 1, and pods with the same
+                            labelSelector spread as 2/2/1:
+                            In this case, the global minimum is 1.
+                            | zone1 | zone2 | zone3 |
+                            |  P P  |  P P  |   P   |
+                            - if MaxSkew is 1, incoming pod can only be scheduled to zone3 to become 2/2/2;
+                            scheduling it onto zone1(zone2) would make the ActualSkew(3-1) on zone1(zone2)
+                            violate MaxSkew(1).
+                            - if MaxSkew is 2, incoming pod can be scheduled onto any zone.
+                            When `whenUnsatisfiable=ScheduleAnyway`, it is used to give higher precedence
+                            to topologies that satisfy it.
+                            It's a required field. Default value is 1 and 0 is not allowed.
+                          format: int32
+                          type: integer
+                        minDomains:
+                          description: |-
+                            MinDomains indicates a minimum number of eligible domains.
+                            When the number of eligible domains with matching topology keys is less than minDomains,
+                            Pod Topology Spread treats "global minimum" as 0, and then the calculation of Skew is performed.
+                            And when the number of eligible domains with matching topology keys equals or greater than minDomains,
+                            this value has no effect on scheduling.
+                            As a result, when the number of eligible domains is less than minDomains,
+                            scheduler won't schedule more than maxSkew Pods to those domains.
+                            If value is nil, the constraint behaves as if MinDomains is equal to 1.
+                            Valid values are integers greater than 0.
+                            When value is not nil, WhenUnsatisfiable must be DoNotSchedule.
+
+                            For example, in a 3-zone cluster, MaxSkew is set to 2, MinDomains is set to 5 and pods with the same
+                            labelSelector spread as 2/2/2:
+                            | zone1 | zone2 | zone3 |
+                            |  P P  |  P P  |  P P  |
+                            The number of domains is less than 5(MinDomains), so "global minimum" is treated as 0.
+                            In this situation, new pod with the same labelSelector cannot be scheduled,
+                            because computed skew will be 3(3 - 0) if new Pod is scheduled to any of the three zones,
+                            it will violate MaxSkew.
+                          format: int32
+                          type: integer
+                        nodeAffinityPolicy:
+                          description: |-
+                            NodeAffinityPolicy indicates how we will treat Pod's nodeAffinity/nodeSelector
+                            when calculating pod topology spread skew. Options are:
+                            - Honor: only nodes matching nodeAffinity/nodeSelector are included in the calculations.
+                            - Ignore: nodeAffinity/nodeSelector are ignored. All nodes are included in the calculations.
+
+                            If this value is nil, the behavior is equivalent to the Honor policy.
+                            This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
+                          type: string
+                        nodeTaintsPolicy:
+                          description: |-
+                            NodeTaintsPolicy indicates how we will treat node taints when calculating
+                            pod topology spread skew. Options are:
+                            - Honor: nodes without taints, along with tainted nodes for which the incoming pod
+                            has a toleration, are included.
+                            - Ignore: node taints are ignored. All nodes are included.
+
+                            If this value is nil, the behavior is equivalent to the Ignore policy.
+                            This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
+                          type: string
+                        topologyKey:
+                          description: |-
+                            TopologyKey is the key of node labels. Nodes that have a label with this key
+                            and identical values are considered to be in the same topology.
+                            We consider each <key, value> as a "bucket", and try to put balanced number
+                            of pods into each bucket.
+                            We define a domain as a particular instance of a topology.
+                            Also, we define an eligible domain as a domain whose nodes meet the requirements of
+                            nodeAffinityPolicy and nodeTaintsPolicy.
+                            e.g. If TopologyKey is "kubernetes.io/hostname", each Node is a domain of that topology.
+                            And, if TopologyKey is "topology.kubernetes.io/zone", each zone is a domain of that topology.
+                            It's a required field.
+                          type: string
+                        whenUnsatisfiable:
+                          description: |-
+                            WhenUnsatisfiable indicates how to deal with a pod if it doesn't satisfy
+                            the spread constraint.
+                            - DoNotSchedule (default) tells the scheduler not to schedule it.
+                            - ScheduleAnyway tells the scheduler to schedule the pod in any location,
+                              but giving higher precedence to topologies that would help reduce the
+                              skew.
+                            A constraint is considered "Unsatisfiable" for an incoming pod
+                            if and only if every possible node assignment for that pod would violate
+                            "MaxSkew" on some topology.
+                            For example, in a 3-zone cluster, MaxSkew is set to 1, and pods with the same
+                            labelSelector spread as 3/1/1:
+                            | zone1 | zone2 | zone3 |
+                            | P P P |   P   |   P   |
+                            If WhenUnsatisfiable is set to DoNotSchedule, incoming pod can only be scheduled
+                            to zone2(zone3) to become 3/2/1(3/1/2) as ActualSkew(2-1) on zone2(zone3) satisfies
+                            MaxSkew(1). In other words, the cluster can still be imbalanced, but scheduler
+                            won't make it *more* imbalanced.
+                            It's a required field.
+                          type: string
+                      required:
+                      - maxSkew
+                      - topologyKey
+                      - whenUnsatisfiable
+                      type: object
+                    type: array
+                type: object
+              backup:
+                description: |-
+                  Backup configures periodic scheduled backups to S3-compatible storage.
+                  Requires the s3-backup-credentials Secret in the operator namespace and persistence enabled.
+                properties:
+                  failedHistoryLimit:
+                    default: 1
+                    description: FailedHistoryLimit is the number of failed CronJob
+                      runs to retain.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  historyLimit:
+                    default: 3
+                    description: HistoryLimit is the number of successful CronJob
+                      runs to retain.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  retentionDays:
+                    default: 7
+                    description: |-
+                      RetentionDays is the number of days to keep daily snapshots in S3.
+                      The periodic backup syncs incrementally to a fixed "latest" path and
+                      takes a daily snapshot. Snapshots older than RetentionDays are pruned
+                      after each successful backup.
+                    format: int32
+                    maximum: 365
+                    minimum: 1
+                    type: integer
+                  schedule:
+                    description: |-
+                      Schedule is a cron expression for periodic backups (e.g., "0 2 * * *" for daily at 2 AM).
+                      When set, the operator creates a CronJob that runs rclone to sync PVC data to S3.
+                      Requires persistence to be enabled and the s3-backup-credentials Secret
+                      in the operator namespace.
+                    type: string
+                  serviceAccountName:
+                    description: |-
+                      ServiceAccountName is the name of the ServiceAccount to use for backup and restore Jobs.
+                      Use this to assign a cloud-provider workload identity ServiceAccount (e.g., AWS IRSA,
+                      GKE Workload Identity, AKS Workload Identity) so backup Jobs can authenticate to the
+                      storage backend without static credentials.
+                      When set, all backup Jobs (pre-delete, pre-update, periodic, and restore) use this SA.
+                    type: string
+                  timeout:
+                    description: |-
+                      Timeout is the maximum duration to wait for a pre-delete backup to complete
+                      before giving up and proceeding with deletion (Go duration string, e.g. "30m", "1h").
+                      Covers all phases: StatefulSet scale-down, pod termination, Job execution, and
+                      Job failure retries. When the timeout elapses the operator logs a warning,
+                      emits a BackupTimedOut event, and removes the finalizer so deletion can proceed.
+                      Minimum: 5m, Maximum: 24h, Default: 30m.
+                    type: string
                 type: object
               chromium:
                 description: Chromium enables the Chromium sidecar for browser automation
@@ -1083,6 +1361,136 @@ spec:
                     description: Enabled enables the Chromium sidecar for browser
                       automation
                     type: boolean
+                  extraArgs:
+                    description: |-
+                      ExtraArgs specifies additional command-line arguments passed to the
+                      Chromium process. These are appended to the default arguments.
+                      Example: ["--disable-blink-features=AutomationControlled", "--user-agent=Mozilla/5.0 ..."]
+                    items:
+                      type: string
+                    type: array
+                  extraEnv:
+                    description: |-
+                      ExtraEnv specifies additional environment variables for the Chromium
+                      sidecar container, merged with the operator-managed variables.
+                    items:
+                      description: EnvVar represents an environment variable present
+                        in a Container.
+                      properties:
+                        name:
+                          description: Name of the environment variable. Must be a
+                            C_IDENTIFIER.
+                          type: string
+                        value:
+                          description: |-
+                            Variable references $(VAR_NAME) are expanded
+                            using the previously defined environment variables in the container and
+                            any service environment variables. If a variable cannot be resolved,
+                            the reference in the input string will be unchanged. Double $$ are reduced
+                            to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e.
+                            "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)".
+                            Escaped references will never be expanded, regardless of whether the variable
+                            exists or not.
+                            Defaults to "".
+                          type: string
+                        valueFrom:
+                          description: Source for the environment variable's value.
+                            Cannot be used if value is not empty.
+                          properties:
+                            configMapKeyRef:
+                              description: Selects a key of a ConfigMap.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fieldRef:
+                              description: |-
+                                Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+                                spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+                              properties:
+                                apiVersion:
+                                  description: Version of the schema the FieldPath
+                                    is written in terms of, defaults to "v1".
+                                  type: string
+                                fieldPath:
+                                  description: Path of the field to select in the
+                                    specified API version.
+                                  type: string
+                              required:
+                              - fieldPath
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            resourceFieldRef:
+                              description: |-
+                                Selects a resource of the container: only resources limits and requests
+                                (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+                              properties:
+                                containerName:
+                                  description: 'Container name: required for volumes,
+                                    optional for env vars'
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: Specifies the output format of the
+                                    exposed resources, defaults to "1"
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  description: 'Required: resource to select'
+                                  type: string
+                              required:
+                              - resource
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secretKeyRef:
+                              description: Selects a key of a secret in the pod's
+                                namespace
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
                   image:
                     description: Image configures the Chromium container image
                     properties:
@@ -1097,6 +1505,38 @@ spec:
                       tag:
                         default: stable
                         description: Tag is the container image tag
+                        type: string
+                    type: object
+                  persistence:
+                    description: |-
+                      Persistence configures persistent storage for the Chromium browser profile.
+                      When enabled, browser state (cookies, localStorage, session tokens) survives
+                      pod restarts. When disabled (default), an emptyDir is used and all browser
+                      state is lost on restart.
+                    properties:
+                      enabled:
+                        default: false
+                        description: |-
+                          Enabled enables persistent storage for the Chromium browser profile.
+                          When true, a PVC is created (or an existing one is used) and mounted at
+                          /chromium-data. The --user-data-dir flag is set automatically so that
+                          cookies, localStorage, session tokens, and cached credentials survive
+                          pod restarts.
+                        type: boolean
+                      existingClaim:
+                        description: |-
+                          ExistingClaim is the name of a pre-existing PVC to use instead of
+                          creating a new one. When set, storageClass and size are ignored.
+                        type: string
+                      size:
+                        default: 1Gi
+                        description: Size is the requested storage size for the Chromium
+                          profile PVC.
+                        type: string
+                      storageClass:
+                        description: |-
+                          StorageClass is the name of the StorageClass to use for the PVC.
+                          If empty, the cluster default StorageClass is used.
                         type: string
                     type: object
                   resources:
@@ -1290,6 +1730,9 @@ spec:
                   - name
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               envFrom:
                 description: |-
                   EnvFrom is a list of sources to populate environment variables from
@@ -3170,8 +3613,27 @@ spec:
                 maxItems: 10
                 type: array
               gateway:
-                description: Gateway configures the gateway authentication token
+                description: Gateway configures the gateway reverse proxy and authentication
+                  token
                 properties:
+                  controlUiOrigins:
+                    description: |-
+                      ControlUiOrigins is a list of additional allowed origins for the Control UI.
+                      The operator always auto-injects localhost origins (http://localhost:18789,
+                      http://127.0.0.1:18789) and derives origins from ingress hosts. Use this
+                      field to add extra origins (e.g., custom reverse proxy URLs).
+                    items:
+                      type: string
+                    maxItems: 20
+                    type: array
+                  enabled:
+                    default: true
+                    description: |-
+                      Enabled controls whether the built-in gateway reverse proxy sidecar is
+                      injected into the pod. When false, no proxy container is added and health
+                      probes target the OpenClaw gateway directly on port 18789.
+                      Defaults to true.
+                    type: boolean
                   existingSecret:
                     description: |-
                       ExistingSecret is the name of a user-managed Secret containing the gateway token.
@@ -3219,7 +3681,7 @@ spec:
                     description: Repository is the container image repository
                     type: string
                   tag:
-                    default: stable
+                    default: latest
                     description: Tag is the container image tag
                     type: string
                 type: object
@@ -4707,6 +5169,35 @@ spec:
                       security:
                         description: Security configures ingress security settings
                         properties:
+                          basicAuth:
+                            description: |-
+                              BasicAuth configures HTTP Basic Authentication for the Ingress.
+                              Disabled by default. When enabled without an existingSecret, the operator
+                              auto-generates a random password and stores it in a managed Secret.
+                            properties:
+                              enabled:
+                                default: false
+                                description: Enabled enables basic authentication.
+                                type: boolean
+                              existingSecret:
+                                description: |-
+                                  ExistingSecret is the name of an existing Secret that already contains
+                                  htpasswd-formatted content in a key named "auth".
+                                  When set, the operator uses this Secret instead of generating one.
+                                type: string
+                              realm:
+                                default: OpenClaw
+                                description: Realm is the authentication realm shown
+                                  in browser prompts.
+                                type: string
+                              username:
+                                default: openclaw
+                                description: |-
+                                  Username for the auto-generated htpasswd Secret.
+                                  Ignored when existingSecret is set.
+                                maxLength: 64
+                                type: string
+                            type: object
                           enableHSTS:
                             default: true
                             description: EnableHSTS enables HTTP Strict Transport
@@ -4840,11 +5331,53 @@ spec:
                         default: true
                         description: Enabled enables metrics endpoint
                         type: boolean
+                      grafanaDashboard:
+                        description: GrafanaDashboard configures auto-provisioned
+                          Grafana dashboard ConfigMaps
+                        properties:
+                          enabled:
+                            default: false
+                            description: Enabled enables Grafana dashboard ConfigMap
+                              creation
+                            type: boolean
+                          folder:
+                            default: OpenClaw
+                            description: Folder is the Grafana folder to place the
+                              dashboards in
+                            type: string
+                          labels:
+                            additionalProperties:
+                              type: string
+                            description: 'Labels to add to the dashboard ConfigMaps
+                              (in addition to grafana_dashboard: "1")'
+                            type: object
+                        type: object
                       port:
                         default: 9090
                         description: Port is the port to expose metrics on
                         format: int32
                         type: integer
+                      prometheusRule:
+                        description: PrometheusRule configures auto-provisioned PrometheusRule
+                          alerts
+                        properties:
+                          enabled:
+                            default: false
+                            description: Enabled enables PrometheusRule creation with
+                              operator alerts
+                            type: boolean
+                          labels:
+                            additionalProperties:
+                              type: string
+                            description: Labels to add to the PrometheusRule (e.g.,
+                              for Prometheus rule selector matching)
+                            type: object
+                          runbookBaseURL:
+                            default: https://paperclip.inc/docs/operators/openclaw/runbooks
+                            description: RunbookBaseURL is the base URL for alert
+                              runbook links
+                            type: string
+                        type: object
                       serviceMonitor:
                         description: ServiceMonitor configures the Prometheus ServiceMonitor
                         properties:
@@ -4889,7 +5422,7 @@ spec:
                         description: Repository is the container image repository
                         type: string
                       tag:
-                        default: stable
+                        default: latest
                         description: Tag is the container image tag
                         type: string
                     type: object
@@ -4941,8 +5474,30 @@ spec:
                         type: string
                     type: object
                 type: object
+              plugins:
+                description: |-
+                  Plugins is a list of plugins to install via init container.
+                  Each entry is an npm package name (e.g., "@openclaw/matrix" or
+                  "@martian-engineering/lossless-claw"). An optional "npm:" prefix is
+                  accepted and stripped before installation.
+                  Installation goes through the OpenClaw CLI's ClawHub installer
+                  ("openclaw plugins install clawhub:<pkg>") rather than raw npm install
+                  so packages published with workspace:* dependency markers resolve
+                  correctly. npm lifecycle scripts are disabled for security.
+                items:
+                  type: string
+                maxItems: 20
+                type: array
+              podAnnotations:
+                additionalProperties:
+                  type: string
+                description: |-
+                  PodAnnotations are extra annotations merged into the pod template metadata.
+                  Operator-managed annotations (e.g. config-hash) take precedence on conflict.
+                type: object
               probes:
                 description: Probes configures health probes for the OpenClaw container
+                nullable: true
                 properties:
                   liveness:
                     description: Liveness probe configuration
@@ -5029,6 +5584,14 @@ spec:
                         type: integer
                     type: object
                 type: object
+              registry:
+                description: |-
+                  Registry is the global container image registry override.
+                  When set, this registry replaces the registry part of all container images
+                  used by the instance (main container, sidecars, init containers).
+                  Example: "my-registry.example.com" will change "ghcr.io/openclaw/openclaw:latest"
+                  to "my-registry.example.com/openclaw/openclaw:latest".
+                type: string
               resources:
                 description: Resources specifies the compute resources for the OpenClaw
                   container
@@ -5136,6 +5699,17 @@ spec:
                           ReadOnlyRootFilesystem mounts the container's root filesystem as read-only
                           The PVC at ~/.openclaw/ provides writable home, and a /tmp emptyDir handles temp files
                         type: boolean
+                      runAsNonRoot:
+                        description: |-
+                          RunAsNonRoot indicates that the container must run as a non-root user.
+                          When not set, inherits from podSecurityContext.runAsNonRoot.
+                        type: boolean
+                      runAsUser:
+                        description: |-
+                          RunAsUser is the UID to run the entrypoint of the container process.
+                          When not set, inherits from podSecurityContext.runAsUser.
+                        format: int64
+                        type: integer
                     type: object
                   networkPolicy:
                     description: NetworkPolicy configures network isolation
@@ -5448,6 +6022,48 @@ spec:
                         type: string
                     type: object
                 type: object
+              selfConfigure:
+                description: |-
+                  SelfConfigure enables agents to modify their own instance via OpenClawSelfConfig resources.
+                  When enabled, the operator injects RBAC, env vars, and a helper skill into the workspace.
+                properties:
+                  allowedActions:
+                    description: |-
+                      AllowedActions restricts which action categories the agent can perform.
+                      If empty and enabled is true, no actions are allowed (fail-safe).
+                    items:
+                      description: SelfConfigAction represents an action category
+                        that can be allowed for self-configuration.
+                      enum:
+                      - skills
+                      - config
+                      - workspaceFiles
+                      - envVars
+                      type: string
+                    maxItems: 4
+                    type: array
+                  enabled:
+                    default: false
+                    description: |-
+                      Enabled enables self-configuration for this instance.
+                      When true, the agent can create OpenClawSelfConfig resources to modify its own spec.
+                    type: boolean
+                type: object
+              shareProcessNamespace:
+                default: true
+                description: |-
+                  ShareProcessNamespace enables PID namespace sharing between all containers
+                  in the pod. When true, the infrastructure (pause) container becomes PID 1
+                  and reaps zombie processes, which prevents accumulation of defunct helper
+                  processes (git, plugins, QMD memory, shells) under a Node.js gateway that
+                  does not call waitpid(). Defaults to true.
+
+                  Security note: enabling this lets every container in the pod see and signal
+                  every other container's processes. A compromised sidecar (Tailscale, Ollama,
+                  browser, custom) could send signals to the gateway and vice versa. Set to
+                  false to keep per-container PID isolation; you are then responsible for
+                  reaping zombies (e.g. by baking tini or dumb-init into the image).
+                type: boolean
               sidecarVolumes:
                 description: SidecarVolumes is a list of additional volumes to make
                   available to sidecar containers.
@@ -8642,6 +9258,7 @@ spec:
                   type: string
                 maxItems: 20
                 type: array
+                x-kubernetes-list-type: set
               storage:
                 description: Storage specifies persistent storage configuration
                 properties:
@@ -8664,6 +9281,14 @@ spec:
                         description: ExistingClaim is the name of an existing PVC
                           to use
                         type: string
+                      orphan:
+                        default: true
+                        description: |-
+                          Orphan controls whether the PVC is retained when the OpenClawInstance is deleted.
+                          When true (the default), the operator removes the owner reference from the PVC
+                          before deleting the CR so Kubernetes does not garbage-collect it.
+                          Set to false if you want the PVC deleted together with the CR.
+                        type: boolean
                       size:
                         default: 10Gi
                         description: Size is the size of the PVC (e.g., "10Gi")
@@ -8674,6 +9299,13 @@ spec:
                         type: string
                     type: object
                 type: object
+              suspended:
+                default: false
+                description: |-
+                  Suspended scales the workload to zero replicas when true.
+                  Non-runtime resources (Service, ConfigMap, RBAC, NetworkPolicy, PVC)
+                  remain fully managed. Set to false to resume normal operation.
+                type: boolean
               tailscale:
                 description: Tailscale configures Tailscale integration for tailnet
                   access and HTTPS
@@ -8713,6 +9345,25 @@ spec:
                     description: Hostname sets the Tailscale device name (defaults
                       to instance name).
                     type: string
+                  image:
+                    description: |-
+                      Image configures the Tailscale sidecar container image.
+                      The same image is used for the sidecar and the init container that
+                      copies the tailscale CLI binary.
+                    properties:
+                      digest:
+                        description: Digest is the container image digest for supply
+                          chain security
+                        type: string
+                      repository:
+                        default: ghcr.io/tailscale/tailscale
+                        description: Repository is the container image repository
+                        type: string
+                      tag:
+                        default: latest
+                        description: Tag is the container image tag
+                        type: string
+                    type: object
                   mode:
                     default: serve
                     description: |-
@@ -8723,6 +9374,114 @@ spec:
                     - serve
                     - funnel
                     type: string
+                  resources:
+                    description: Resources specifies compute resources for the Tailscale
+                      sidecar container.
+                    properties:
+                      limits:
+                        description: Limits describes the maximum amount of compute
+                          resources allowed
+                        properties:
+                          cpu:
+                            description: CPU resource (e.g., "500m", "2")
+                            type: string
+                          memory:
+                            description: Memory resource (e.g., "512Mi", "2Gi")
+                            type: string
+                        type: object
+                      requests:
+                        description: Requests describes the minimum amount of compute
+                          resources required
+                        properties:
+                          cpu:
+                            description: CPU resource (e.g., "500m", "2")
+                            type: string
+                          memory:
+                            description: Memory resource (e.g., "512Mi", "2Gi")
+                            type: string
+                        type: object
+                    type: object
+                type: object
+              webTerminal:
+                description: WebTerminal enables a browser-based terminal (ttyd) sidecar
+                  for debugging
+                properties:
+                  credential:
+                    description: |-
+                      Credential configures basic auth for the web terminal via a Secret.
+                      The Secret must have "username" and "password" keys.
+                    properties:
+                      secretRef:
+                        description: SecretRef references a Secret containing "username"
+                          and "password" keys
+                        properties:
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    required:
+                    - secretRef
+                    type: object
+                  enabled:
+                    default: false
+                    description: Enabled enables the ttyd web terminal sidecar for
+                      browser-based shell access
+                    type: boolean
+                  image:
+                    description: Image configures the ttyd container image
+                    properties:
+                      digest:
+                        description: Digest is the container image digest for supply
+                          chain security
+                        type: string
+                      repository:
+                        default: tsl0922/ttyd
+                        description: Repository is the container image repository
+                        type: string
+                      tag:
+                        default: latest
+                        description: Tag is the container image tag
+                        type: string
+                    type: object
+                  readOnly:
+                    default: false
+                    description: ReadOnly starts ttyd in read-only mode (view-only,
+                      no input)
+                    type: boolean
+                  resources:
+                    description: Resources specifies compute resources for the ttyd
+                      container
+                    properties:
+                      limits:
+                        description: Limits describes the maximum amount of compute
+                          resources allowed
+                        properties:
+                          cpu:
+                            description: CPU resource (e.g., "500m", "2")
+                            type: string
+                          memory:
+                            description: Memory resource (e.g., "512Mi", "2Gi")
+                            type: string
+                        type: object
+                      requests:
+                        description: Requests describes the minimum amount of compute
+                          resources required
+                        properties:
+                          cpu:
+                            description: CPU resource (e.g., "500m", "2")
+                            type: string
+                          memory:
+                            description: Memory resource (e.g., "512Mi", "2Gi")
+                            type: string
+                        type: object
+                    type: object
                 type: object
               workspace:
                 description: |-
@@ -8730,6 +9489,93 @@ spec:
                   Files are copied once on first boot and never overwritten, so agent
                   modifications survive pod restarts.
                 properties:
+                  additionalWorkspaces:
+                    description: |-
+                      AdditionalWorkspaces configures workspace files for secondary agents.
+                      Each entry seeds files to ~/.openclaw/workspace-<name>/, matching the
+                      workspace path configured in spec.config.raw.agents.list[].workspace.
+                    items:
+                      description: |-
+                        AdditionalWorkspace defines a named workspace for a secondary agent.
+                        The operator seeds files to ~/.openclaw/workspace-<name>/.
+                      properties:
+                        configMapRef:
+                          description: ConfigMapRef references an external ConfigMap
+                            whose keys become workspace files.
+                          properties:
+                            name:
+                              description: Name is the name of the ConfigMap to reference.
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        initialDirectories:
+                          description: InitialDirectories is a list of directories
+                            to create inside this workspace.
+                          items:
+                            type: string
+                          maxItems: 20
+                          type: array
+                        initialFiles:
+                          additionalProperties:
+                            type: string
+                          description: InitialFiles maps filenames to their content
+                            (same as spec.workspace.initialFiles).
+                          maxProperties: 50
+                          type: object
+                        name:
+                          description: |-
+                            Name identifies this workspace. The operator seeds files to
+                            ~/.openclaw/workspace-<name>/. Must match the workspace path
+                            configured in spec.config.raw.agents.list[].workspace.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    maxItems: 10
+                    type: array
+                  bootstrap:
+                    description: |-
+                      Bootstrap controls the operator-managed BOOTSTRAP.md file injected into
+                      the default workspace to guide first-run agent onboarding.
+                    properties:
+                      enabled:
+                        default: true
+                        description: |-
+                          Enabled controls whether the operator injects its BOOTSTRAP.md into the
+                          default workspace. When true (the default), the init container seeds
+                          BOOTSTRAP.md on pod start if the file is not present on the PVC.
+
+                          Set to false if the agent has already completed bootstrap and you don't
+                          want the operator to recreate the file on pod restart or config change.
+                          OpenClaw deletes BOOTSTRAP.md after applying it, so without this flag
+                          every restart would cause the agent to re-run bootstrap. See #463.
+                        type: boolean
+                    type: object
+                  configMapRef:
+                    description: |-
+                      ConfigMapRef references an external ConfigMap whose keys become workspace files.
+                      All keys in the referenced ConfigMap are included as workspace files.
+                      This is useful for GitOps workflows where workspace files (AGENT.md, SOUL.md, etc.)
+                      are managed as standalone files and bundled via Kustomize configMapGenerator or similar.
+
+                      Merge priority (highest wins):
+                      1. Operator-injected files (ENVIRONMENT.md, BOOTSTRAP.md, SELFCONFIG.md, selfconfig.sh)
+                      2. Inline initialFiles
+                      3. External configMapRef entries
+                      4. Skill pack files
+                    properties:
+                      name:
+                        description: Name is the name of the ConfigMap to reference.
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    type: object
                   initialDirectories:
                     description: |-
                       InitialDirectories is a list of directories to create (mkdir -p)
@@ -8807,6 +9653,13 @@ spec:
                     - RollingBack
                     type: string
                 type: object
+              backingUpSince:
+                description: |-
+                  BackingUpSince is the timestamp when the instance entered the BackingUp phase.
+                  Used to enforce spec.backup.timeout. Set once when the phase transitions to BackingUp
+                  and cleared when the phase changes.
+                format: date-time
+                type: string
               backupJobName:
                 description: BackupJobName is the name of the active backup Job
                 type: string
@@ -8891,6 +9744,18 @@ spec:
                 description: ManagedResources tracks the resources created by the
                   operator
                 properties:
+                  backupCronJob:
+                    description: BackupCronJob is the name of the managed periodic
+                      backup CronJob
+                    type: string
+                  basicAuthSecret:
+                    description: BasicAuthSecret is the name of the auto-generated
+                      Ingress Basic Auth htpasswd Secret
+                    type: string
+                  chromiumPVC:
+                    description: ChromiumPVC is the name of the managed Chromium browser
+                      profile PVC
+                    type: string
                   configMap:
                     description: ConfigMap is the name of the managed ConfigMap
                     type: string
@@ -8902,11 +9767,26 @@ spec:
                     description: GatewayTokenSecret is the name of the auto-generated
                       gateway token Secret
                     type: string
+                  grafanaDashboardInstance:
+                    description: GrafanaDashboardInstance is the name of the instance
+                      detail dashboard ConfigMap
+                    type: string
+                  grafanaDashboardOperator:
+                    description: GrafanaDashboardOperator is the name of the operator
+                      overview dashboard ConfigMap
+                    type: string
+                  horizontalPodAutoscaler:
+                    description: HorizontalPodAutoscaler is the name of the managed
+                      HPA
+                    type: string
                   networkPolicy:
                     description: NetworkPolicy is the name of the managed NetworkPolicy
                     type: string
                   podDisruptionBudget:
                     description: PodDisruptionBudget is the name of the managed PDB
+                    type: string
+                  prometheusRule:
+                    description: PrometheusRule is the name of the managed PrometheusRule
                     type: string
                   pvc:
                     description: PVC is the name of the managed PersistentVolumeClaim
@@ -8926,6 +9806,11 @@ spec:
                   statefulSet:
                     description: StatefulSet is the name of the managed StatefulSet
                     type: string
+                  tailscaleStateSecret:
+                    description: |-
+                      TailscaleStateSecret is the name of the Secret used to persist Tailscale
+                      node identity and TLS certificate state across pod restarts
+                    type: string
                 type: object
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed
@@ -8944,6 +9829,7 @@ spec:
                 - BackingUp
                 - Restoring
                 - Updating
+                - Suspended
                 type: string
               restoreJobName:
                 description: RestoreJobName is the name of the active restore Job
