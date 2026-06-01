@@ -12,7 +12,7 @@
 
 **Self-host [OpenClaw](https://openclaw.ai) AI agents on Kubernetes with production-grade security, observability, and lifecycle management.**
 
-OpenClaw is an AI agent platform that acts on your behalf across Telegram, Discord, WhatsApp, and Signal. It manages your inbox, calendar, smart home, and more through 50+ integrations. While [Paperclip Inc.](https://paperclip.inc) offers fully managed hosting, this operator lets you run OpenClaw on your own infrastructure with the same operational rigor.
+OpenClaw is an AI agent platform that acts on your behalf across Telegram, Discord, WhatsApp, and Signal. It manages your inbox, calendar, smart home, and more through 50+ integrations. While [Paperclip Inc.](https://paperclip.inc/openclaw) offers fully managed hosting, this operator lets you run OpenClaw on your own infrastructure with the same operational rigor.
 
 ---
 
@@ -1277,7 +1277,7 @@ See the full [roadmap](ROADMAP.md) for details.
 
 ## Don't Want to Self-Host?
 
-[Paperclip Inc.](https://paperclip.inc) offers fully managed hosting starting at **EUR 15/mo**. No Kubernetes cluster required. Setup, updates, and 24/7 uptime handled for you.
+[Paperclip Inc.](https://paperclip.inc/openclaw) offers fully managed hosting starting at **EUR 19/mo**. No Kubernetes cluster required. Setup, updates, and 24/7 uptime handled for you.
 
 ## Contributing
 
