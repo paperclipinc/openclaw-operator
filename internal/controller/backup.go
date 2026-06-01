@@ -54,17 +54,7 @@ func (r *OpenClawInstanceReconciler) reconcileDeleteWithBackup(ctx context.Conte
 	logger := log.FromContext(ctx)
 	logger.Info("Handling deletion with backup", "instance", instance.Name, "namespace", instance.Namespace)
 
-	// Step 0: Update phase to BackingUp and record start time (if not already terminating/backing up)
-	if instance.Status.Phase != openclawv1alpha1.PhaseBackingUp && instance.Status.Phase != openclawv1alpha1.PhaseTerminating {
-		now := metav1.Now()
-		instance.Status.Phase = openclawv1alpha1.PhaseBackingUp
-		instance.Status.BackingUpSince = &now
-		if err := r.Status().Update(ctx, instance); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	// Step 1: Check skip-backup annotation
+	// Step 1: Check skip-backup annotation — before any phase change or scale-down
 	if instance.Annotations[AnnotationSkipBackup] == "true" {
 		logger.Info("Skip-backup annotation set, removing finalizer immediately")
 		instance.Status.Phase = openclawv1alpha1.PhaseTerminating
@@ -82,6 +72,16 @@ func (r *OpenClawInstanceReconciler) reconcileDeleteWithBackup(ctx context.Conte
 			return ctrl.Result{}, err
 		}
 		return r.removeFinalizer(ctx, instance)
+	}
+
+	// Step 0: Update phase to BackingUp and record start time (if not already terminating/backing up)
+	if instance.Status.Phase != openclawv1alpha1.PhaseBackingUp && instance.Status.Phase != openclawv1alpha1.PhaseTerminating {
+		now := metav1.Now()
+		instance.Status.Phase = openclawv1alpha1.PhaseBackingUp
+		instance.Status.BackingUpSince = &now
+		if err := r.Status().Update(ctx, instance); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Step 2: Check backup timeout
