@@ -1116,9 +1116,9 @@ func buildSkillsInitContainer(instance *openclawv1alpha1.OpenClawInstance) *core
 // raw npm rejects with EUNSUPPORTEDPROTOCOL (#505).
 func parsePluginEntry(entry string) string {
 	if pkg, ok := strings.CutPrefix(entry, "npm:"); ok {
-		return fmt.Sprintf("openclaw plugins install %s", shellQuote("npm:"+pkg))
+		return fmt.Sprintf("openclaw plugins install --force %s", shellQuote("npm:"+pkg))
 	}
-	return fmt.Sprintf("openclaw plugins install %s", shellQuote("clawhub:"+entry))
+	return fmt.Sprintf("openclaw plugins install --force %s", shellQuote("clawhub:"+entry))
 }
 
 // BuildPluginsScript generates the shell script for the plugins init container.

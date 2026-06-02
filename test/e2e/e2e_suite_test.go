@@ -2114,9 +2114,9 @@ var _ = Describe("OpenClawInstance Controller", func() {
 			script := pluginsContainer.Command[2]
 			Expect(script).To(ContainSubstring("mkdir -p /home/openclaw/.openclaw/extensions"),
 				"init-plugins must ensure the extensions directory exists")
-			Expect(script).To(ContainSubstring("openclaw plugins install 'clawhub:@openclaw/matrix'"),
+			Expect(script).To(ContainSubstring("openclaw plugins install --force 'clawhub:@openclaw/matrix'"),
 				"matrix must be installed via the openclaw CLI (issue #505)")
-			Expect(script).To(ContainSubstring("openclaw plugins install 'clawhub:@martian-engineering/lossless-claw'"),
+			Expect(script).To(ContainSubstring("openclaw plugins install --force 'clawhub:@martian-engineering/lossless-claw'"),
 				"third-party plugins must also go through the openclaw CLI")
 			// Regression guards: previous layouts that fail for workspace:*-publishing plugins.
 			Expect(script).NotTo(ContainSubstring("cd /home/openclaw/.openclaw && npm install"),
