@@ -246,6 +246,32 @@ type ConfigSpec struct {
 	// +kubebuilder:default="json"
 	// +optional
 	Format string `json:"format,omitempty"`
+
+	// ForcePaths is a list of dot-separated config paths (e.g. "gateway",
+	// "models.providers", "agents.defaults.sandbox") that the init container
+	// force-overwrites from the operator-managed config on every pod restart,
+	// even under mergeMode=merge. For each listed path, the subtree is first
+	// deleted from the existing PVC config and then re-applied via deep merge
+	// from spec.config.raw, so the final value matches the CR exactly.
+	//
+	// Use case: a managed deployer (operator of a multi-tenant openclaw
+	// service) wants tenants to persist user-owned config across restarts
+	// (channels.telegram.botToken, settings, etc -- requires mergeMode=merge)
+	// but must guarantee that operator-owned paths (gateway auth tokens,
+	// allowed model providers, sandbox image) are always rebuilt from the CR.
+	// Without forcePaths, a tenant could persist e.g.
+	// models.providers.<rogue>.apiKey via the Control UI and route inference
+	// through their own third-party key while consuming the deployer's
+	// compute -- a verified attack path.
+	//
+	// Only applies when mergeMode=merge. Ignored (and rejected by the
+	// validating webhook) under mergeMode=overwrite, which already overwrites
+	// the entire config file on every restart.
+	//
+	// +kubebuilder:validation:MaxItems=20
+	// +listType=set
+	// +optional
+	ForcePaths []string `json:"forcePaths,omitempty"`
 }
 
 // ConfigMapKeySelector selects a key from a ConfigMap

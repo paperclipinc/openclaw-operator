@@ -75,6 +75,7 @@ Every request is validated against the instance's allowlist policy. Protected co
 | **Observable** | Built-in metrics | Prometheus metrics, ServiceMonitor integration, structured JSON logging, Kubernetes events |
 | **Flexible** | Provider-agnostic config | Use any AI provider (Anthropic, OpenAI, or others) via environment variables and inline or external config |
 | **Config Modes** | Merge or overwrite | `overwrite` replaces config on restart; `merge` deep-merges with PVC config, preserving runtime changes. Config is restored on every container restart via init container. |
+| **Force Paths** | Operator-owned paths under merge | `config.forcePaths` lists dot-paths the init container rebuilds from the CR on every restart even under `mergeMode: merge` -- lets managed deployers keep operator-owned config (auth, allowed providers, sandbox image) immune to tenant edits while user-owned config persists |
 | **Skills** | Declarative install | Install ClawHub skills, npm packages, or GitHub-hosted skill packs via `spec.skills` - supports `npm:` and `pack:` prefixes |
 | **Plugins** | Declarative install | Install OpenClaw plugins via `spec.plugins` - npm packages installed in a secure init container |
 | **Runtime Deps** | pnpm & Python/uv | Built-in init containers install pnpm (via corepack) or Python 3.12 + uv for MCP servers and skills |
@@ -462,6 +463,37 @@ spec:
 ```
 
 **Caveat:** In merge mode, removing a key from the CR does not remove it from the PVC config - the old value persists because deep-merge only adds or updates keys. If you need to remove stale config keys (e.g., after removing `gateway.mode: local`), temporarily switch to `mergeMode: overwrite`, apply, wait for the pod to restart, then switch back to `merge`.
+
+### Partial overwrite under merge mode (`forcePaths`)
+
+Under `mergeMode: merge` the operator preserves runtime changes the agent (or a tenant via the Control UI) wrote into the config file. For managed multi-tenant deployments this is a problem: a tenant can persist arbitrary values into operator-owned subtrees -- for example `models.providers.<rogue>.apiKey` -- and route inference through their own third-party key while consuming the deployer's compute.
+
+`spec.config.forcePaths` is the partial-overwrite escape hatch. For each listed dot-path the init container deletes that subtree from the PVC config and re-applies it from `spec.config.raw` on every pod restart, so listed paths always match the CR while everything else still persists.
+
+```yaml
+spec:
+  config:
+    mergeMode: merge
+    forcePaths:
+      - gateway
+      - models.providers
+      - agents.defaults.sandbox
+    raw:
+      gateway:
+        auth:
+          mode: token
+      models:
+        providers:
+          openai:
+            baseUrl: "https://api.openai.com"
+      agents:
+        defaults:
+          sandbox: true
+```
+
+With the above, `channels.*`, `settings.*`, and any other user-owned path the agent writes via the Control UI persists across pod restarts; `gateway.*`, `models.providers.*`, and `agents.defaults.sandbox` are rebuilt from the CR on every reconcile.
+
+`forcePaths` is only valid under `mergeMode: merge`. The validating webhook rejects it under `overwrite` (where the whole file is already rebuilt every restart) and rejects malformed paths (empty segments, leading or trailing dot, characters outside `[a-zA-Z0-9._-]`). The same logic runs in both the init container (on pod restart) and the `postStart` lifecycle hook (on container restart without pod recreation), so an attacker cannot bypass the contract by triggering one form of restart over another.
 
 ### Skill installation
 
