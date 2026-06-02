@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.8](https://github.com/paperclipinc/openclaw-operator/compare/v0.34.7...v0.34.8) (2026-06-02)
+
+
+### Bug Fixes
+
+* replace operator logo sunglasses with open eyes ([eb61231](https://github.com/paperclipinc/openclaw-operator/commit/eb61231c14851b3f5c4bf66463742028c126b690))
+
 ## [0.34.7](https://github.com/paperclipinc/openclaw-operator/compare/v0.34.6...v0.34.7) (2026-06-01)
 
 
