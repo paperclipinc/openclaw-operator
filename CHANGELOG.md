@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.35.0](https://github.com/paperclipinc/openclaw-operator/compare/v0.34.8...v0.35.0) (2026-06-02)
+
+
+### Features
+
+* **api:** spec.config.forcePaths for partial-overwrite under mergeMode=merge ([#500](https://github.com/paperclipinc/openclaw-operator/issues/500)) ([e59951c](https://github.com/paperclipinc/openclaw-operator/commit/e59951cbaf020d0e384854cfd537aad93b81aa32))
+
+
+### Bug Fixes
+
+* check skip-backup annotation before setting BackingUp phase ([#524](https://github.com/paperclipinc/openclaw-operator/issues/524)) ([b24b403](https://github.com/paperclipinc/openclaw-operator/commit/b24b40324d384e0d0809b5c31d49b940003e9c11))
+* parsePluginEntry drops npm: prefix, all plugins route through clawhub ([#518](https://github.com/paperclipinc/openclaw-operator/issues/518)) ([50e75a9](https://github.com/paperclipinc/openclaw-operator/commit/50e75a9498b033c06dd2f34a2ce9c338173921fc))
+
 ## [0.34.8](https://github.com/paperclipinc/openclaw-operator/compare/v0.34.7...v0.34.8) (2026-06-02)
 
 
