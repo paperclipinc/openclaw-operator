@@ -892,6 +892,28 @@ spec:
 
 For Traefik ingress, a `Middleware` CRD resource is created automatically (requires Traefik CRDs installed).
 
+### Gateway API HTTPRoute
+
+As an alternative to Ingress, on clusters that use the [Gateway API](https://gateway-api.sigs.k8s.io/) you can expose the instance through an HTTPRoute (`gateway.networking.k8s.io/v1`). Set `spec.networking.httpRoute` to attach the OpenClaw gateway Service to one or more Gateways:
+
+```yaml
+spec:
+  networking:
+    httpRoute:
+      enabled: true
+      parentRefs:
+        - name: external          # name of an existing Gateway
+          namespace: gateway-system # optional, defaults to the instance namespace
+          sectionName: https        # optional, a specific Gateway listener
+      hostnames:
+        - my-agent.example.com
+      port: 18789                  # optional, defaults to the gateway port (18789)
+      annotations:
+        example.com/foo: bar       # optional
+```
+
+The operator builds a single `PathPrefix: /` rule routing to the instance Service. The HTTPRoute is named `<name>` and tracked in `status.managedResources.httpRoute`, with an `HTTPRouteReady` condition reflecting reconcile status. The Gateway API CRDs must be installed; if they are not, reconciliation is skipped and `HTTPRouteReady` reports `GatewayAPINotInstalled`. Set `enabled: false` (or remove the block) to delete a previously created HTTPRoute. See the [API reference](docs/api-reference.md#httproutespec) for all fields.
+
 ### Custom service ports
 
 By default the operator creates a Service with the gateway (18789) and canvas (18793) ports. To expose custom ports instead (e.g., for a non-default application), set `spec.networking.service.ports`:
