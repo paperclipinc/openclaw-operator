@@ -109,3 +109,103 @@ jobs:
           else
             echo "PR already exists for ${FORK_OWNER}:${BRANCH} - branch was force-pushed with updated content"
           fi
+
+  submit-redhat:
+    name: Submit to redhat-openshift-ecosystem/community-operators-prod
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: version
+        run: |
+          # workflow_dispatch passes tag as input; release event uses GITHUB_REF
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.version.outputs.tag }}
+
+      - name: Prepare bundle
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          BUNDLE_DIR="submission/operators/openclaw-operator/${VERSION}"
+
+          mkdir -p "${BUNDLE_DIR}/manifests" "${BUNDLE_DIR}/metadata"
+
+          # Copy and version the CSV
+          sed \
+            -e "s/openclaw-operator\.v[0-9]\+\.[0-9]\+\.[0-9]\+/openclaw-operator.v${VERSION}/g" \
+            -e "s|ghcr.io/paperclipinc/openclaw-operator:v[0-9]\+\.[0-9]\+\.[0-9]\+|ghcr.io/paperclipinc/openclaw-operator:${TAG}|g" \
+            -e "s/createdAt: .*/createdAt: \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"/" \
+            -e "s/^  version: [0-9]\+\.[0-9]\+\.[0-9]\+/  version: ${VERSION}/" \
+            bundle/manifests/openclaw-operator.v*.clusterserviceversion.yaml \
+            > "${BUNDLE_DIR}/manifests/openclaw-operator.v${VERSION}.clusterserviceversion.yaml"
+
+          # Copy CRDs and metadata as-is (all owned CRDs, not just one)
+          cp bundle/manifests/openclaw.rocks_*.yaml "${BUNDLE_DIR}/manifests/"
+          cp bundle/metadata/annotations.yaml "${BUNDLE_DIR}/metadata/"
+
+          echo "Bundle prepared at ${BUNDLE_DIR}:"
+          find "${BUNDLE_DIR}" -type f
+
+      - name: Fork and submit to community-operators-prod
+        env:
+          GH_TOKEN: ${{ secrets.OPERATORHUB_FORK_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BRANCH="openclaw-operator-v${VERSION}"
+
+          # Configure gh as git credential helper so git push works with the PAT
+          gh auth setup-git
+
+          # Clone the community-operators-prod repo (fork is auto-created by gh)
+          gh repo fork redhat-openshift-ecosystem/community-operators-prod --clone -- community-operators-prod
+          cd community-operators-prod
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Sync fork with upstream to avoid stale-branch CI failures
+          git fetch upstream main
+          git reset --hard upstream/main
+
+          git checkout -b "${BRANCH}"
+
+          # Copy prepared bundle (mkdir for first-time submissions)
+          mkdir -p operators/openclaw-operator
+          cp -r ../submission/operators/openclaw-operator/${VERSION} operators/openclaw-operator/${VERSION}
+
+          git add "operators/openclaw-operator/${VERSION}"
+          git commit -m "operator openclaw-operator (${VERSION})"
+          git push --force origin "${BRANCH}"
+
+          # --head requires owner:branch for cross-fork PRs
+          FORK_OWNER=$(gh api user --jq '.login')
+
+          # Create PR or update existing one (re-runs push new content via --force above)
+          if ! gh pr view "${FORK_OWNER}:${BRANCH}" --repo redhat-openshift-ecosystem/community-operators-prod --json state --jq '.state' 2>/dev/null | grep -q OPEN; then
+            gh pr create \
+              --repo redhat-openshift-ecosystem/community-operators-prod \
+              --head "${FORK_OWNER}:${BRANCH}" \
+              --title "operator openclaw-operator (${VERSION})" \
+              --body "$(cat <<EOF
+          ### Update to openclaw-operator
+
+          **Version:** ${VERSION}
+          **Operator:** [OpenClaw Kubernetes Operator](https://github.com/paperclipinc/openclaw-operator)
+
+          #### Changes
+          See [release notes](https://github.com/paperclipinc/openclaw-operator/releases/tag/v${VERSION}).
+
+          #### Testing
+          - CI tests pass on the source repository
+          - Container image is published and signed at \`ghcr.io/paperclipinc/openclaw-operator:v${VERSION}\`
+          EOF
+          )"
+          else
+            echo "PR already exists for ${FORK_OWNER}:${BRANCH} - branch was force-pushed with updated content"
+          fi
