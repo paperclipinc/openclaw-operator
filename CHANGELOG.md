@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.0](https://github.com/paperclipinc/openclaw-operator/compare/v0.35.0...v0.36.0) (2026-06-03)
+
+
+### Features
+
+* add optional Gateway API HTTPRoute support ([#535](https://github.com/paperclipinc/openclaw-operator/issues/535)) ([e56d4bb](https://github.com/paperclipinc/openclaw-operator/commit/e56d4bb322f1d4184ae72d0653d962532dea8935))
+* tier-1/2 parity (operatorhub digest pin, verify-signing, image CEL, conformance) ([#533](https://github.com/paperclipinc/openclaw-operator/issues/533)) ([3787dd0](https://github.com/paperclipinc/openclaw-operator/commit/3787dd0153ae62ead33e2871b3998dbdc69604cc))
+
+
+### Bug Fixes
+
+* **helm:** grant cluster-scoped OpenClawClusterDefaults RBAC under watchNamespaces ([#531](https://github.com/paperclipinc/openclaw-operator/issues/531)) ([7c176eb](https://github.com/paperclipinc/openclaw-operator/commit/7c176eb8b542d67560452919dcd8a4bf8d6f7ae6))
+* idempotent plugin install in init-plugins container ([#528](https://github.com/paperclipinc/openclaw-operator/issues/528)) ([58280c8](https://github.com/paperclipinc/openclaw-operator/commit/58280c8bea4d329b86d7a3cfc18a996700de74da))
+
 ## [0.35.0](https://github.com/paperclipinc/openclaw-operator/compare/v0.34.8...v0.35.0) (2026-06-02)
 
 
