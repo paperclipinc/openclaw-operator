@@ -234,6 +234,12 @@ spec:
                     description: Tag is the container image tag
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: 'spec.image: one of tag or digest must be set (pinning
+                    to an empty tag is not supported, pick a specific upstream release
+                    tag or a digest)'
+                  rule: (has(self.tag) && size(self.tag) > 0) || (has(self.digest)
+                    && size(self.digest) > 0)
               registry:
                 description: |-
                   Registry is the default container image registry override applied to
