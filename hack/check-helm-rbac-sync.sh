@@ -63,14 +63,16 @@ parse_generated() {
 }
 
 # Parse the manager rules block out of _helpers.tpl. The block lives between
-# `{{- define "openclaw-operator.managerRules" -}}` and the matching `{{- end }}`.
-# rbac.yaml renders these rules into either a ClusterRole or per-namespace Roles
-# via `{{ include "openclaw-operator.managerRules" . | nindent 2 }}`, so the
-# helper is the single source of truth for what permissions the operator gets.
+# `{{- define "openclaw-operator.managerRules" -}}` and the matching `{{- end }}`,
+# plus the cluster-scoped split `openclaw-operator.clusterScopedRules` (#529).
+# rbac.yaml renders these rules into ClusterRoles and/or per-namespace Roles via
+# `{{ include "openclaw-operator.managerRules" . | nindent 2 }}` (and the
+# clusterScopedRules include), so the union of both helpers is the single source
+# of truth for what permissions the operator gets.
 parse_helm() {
   awk '
-    /\{\{-? *define .openclaw-operator\.managerRules. *-?\}\}/ { in_rules = 1; next }
-    in_rules && /\{\{-? *end *-?\}\}/ { exit }
+    /\{\{-? *define .openclaw-operator\.(managerRules|clusterScopedRules). *-?\}\}/ { in_rules = 1; next }
+    in_rules && /\{\{-? *end *-?\}\}/ { in_rules = 0; next }
     !in_rules { next }
     /^\s*#/ { next }
 
@@ -110,6 +112,10 @@ parse_helm() {
 # matching helper rules that no template references.
 if ! grep -q 'openclaw-operator\.managerRules' "$HELM"; then
   echo "::error::$HELM does not include the openclaw-operator.managerRules helper"
+  exit 1
+fi
+if ! grep -q 'openclaw-operator\.clusterScopedRules' "$HELM"; then
+  echo "::error::$HELM does not include the openclaw-operator.clusterScopedRules helper (cluster-scoped RBAC, #529)"
   exit 1
 fi
 
