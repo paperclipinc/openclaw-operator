@@ -5149,6 +5149,61 @@ spec:
               networking:
                 description: Networking specifies network-related configuration
                 properties:
+                  httpRoute:
+                    description: |-
+                      HTTPRoute configures a Gateway API HTTPRoute.
+                      This is an alternative to Ingress for clusters using the Gateway API
+                      (gateway.networking.k8s.io). The Gateway API CRDs must be installed.
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Annotations to add to the HTTPRoute
+                        type: object
+                      enabled:
+                        default: false
+                        description: Enabled enables HTTPRoute creation
+                        type: boolean
+                      hostnames:
+                        description: Hostnames specifies the hostnames matched by
+                          this HTTPRoute.
+                        items:
+                          type: string
+                        type: array
+                      parentRefs:
+                        description: |-
+                          ParentRefs specifies the Gateways this HTTPRoute attaches to.
+                          Each ref identifies a Gateway by name (and optionally namespace and sectionName).
+                        items:
+                          description: HTTPRouteParentRef identifies a Gateway that
+                            the HTTPRoute attaches to
+                          properties:
+                            name:
+                              description: Name is the name of the Gateway
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the namespace of the Gateway.
+                                Defaults to the same namespace as the HTTPRoute.
+                              type: string
+                            sectionName:
+                              description: SectionName is the name of a specific listener
+                                on the Gateway to attach to.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                      port:
+                        description: |-
+                          Port is the backend Service port number to route traffic to.
+                          Defaults to the gateway port (18789) when not set.
+                        format: int32
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                    type: object
                   ingress:
                     description: Ingress configures the Kubernetes Ingress
                     properties:
@@ -9817,6 +9872,10 @@ spec:
                   horizontalPodAutoscaler:
                     description: HorizontalPodAutoscaler is the name of the managed
                       HPA
+                    type: string
+                  httpRoute:
+                    description: HTTPRoute is the name of the managed Gateway API
+                      HTTPRoute
                     type: string
                   networkPolicy:
                     description: NetworkPolicy is the name of the managed NetworkPolicy

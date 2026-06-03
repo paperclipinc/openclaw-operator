@@ -922,6 +922,56 @@ type NetworkingSpec struct {
 	// Ingress configures the Kubernetes Ingress
 	// +optional
 	Ingress IngressSpec `json:"ingress,omitempty"`
+
+	// HTTPRoute configures a Gateway API HTTPRoute.
+	// This is an alternative to Ingress for clusters using the Gateway API
+	// (gateway.networking.k8s.io). The Gateway API CRDs must be installed.
+	// +optional
+	HTTPRoute *HTTPRouteSpec `json:"httpRoute,omitempty"`
+}
+
+// HTTPRouteSpec defines a Gateway API HTTPRoute configuration
+type HTTPRouteSpec struct {
+	// Enabled enables HTTPRoute creation
+	// +kubebuilder:default=false
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+
+	// ParentRefs specifies the Gateways this HTTPRoute attaches to.
+	// Each ref identifies a Gateway by name (and optionally namespace and sectionName).
+	// +optional
+	ParentRefs []HTTPRouteParentRef `json:"parentRefs,omitempty"`
+
+	// Hostnames specifies the hostnames matched by this HTTPRoute.
+	// +optional
+	Hostnames []string `json:"hostnames,omitempty"`
+
+	// Port is the backend Service port number to route traffic to.
+	// Defaults to the gateway port (18789) when not set.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	// +optional
+	Port *int32 `json:"port,omitempty"`
+
+	// Annotations to add to the HTTPRoute
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+// HTTPRouteParentRef identifies a Gateway that the HTTPRoute attaches to
+type HTTPRouteParentRef struct {
+	// Name is the name of the Gateway
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace is the namespace of the Gateway.
+	// Defaults to the same namespace as the HTTPRoute.
+	// +optional
+	Namespace *string `json:"namespace,omitempty"`
+
+	// SectionName is the name of a specific listener on the Gateway to attach to.
+	// +optional
+	SectionName *string `json:"sectionName,omitempty"`
 }
 
 // ServiceSpec defines the Service configuration
@@ -1572,6 +1622,10 @@ type ManagedResourcesStatus struct {
 	// +optional
 	BasicAuthSecret string `json:"basicAuthSecret,omitempty"`
 
+	// HTTPRoute is the name of the managed Gateway API HTTPRoute
+	// +optional
+	HTTPRoute string `json:"httpRoute,omitempty"`
+
 	// BackupCronJob is the name of the managed periodic backup CronJob
 	// +optional
 	BackupCronJob string `json:"backupCronJob,omitempty"`
@@ -1658,6 +1712,9 @@ const (
 	// ConditionTypeWorkspaceReady indicates the workspace configuration is valid
 	// and any external ConfigMap referenced by spec.workspace.configMapRef exists
 	ConditionTypeWorkspaceReady = "WorkspaceReady"
+
+	// ConditionTypeHTTPRouteReady indicates the Gateway API HTTPRoute is reconciled
+	ConditionTypeHTTPRouteReady = "HTTPRouteReady"
 )
 
 // Phase constants
