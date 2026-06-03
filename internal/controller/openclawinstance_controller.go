@@ -99,6 +99,7 @@ type OpenClawInstanceReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;delete
 // +kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;create;update;patch;delete
@@ -496,6 +497,12 @@ func (r *OpenClawInstanceReconciler) reconcileResources(ctx context.Context, ins
 		return fmt.Errorf("failed to reconcile Ingress: %w", err)
 	}
 	logger.V(1).Info("Ingress reconciled")
+
+	// 8b. Reconcile HTTPRoute (Gateway API, if enabled)
+	if err := r.reconcileHTTPRoute(ctx, instance); err != nil {
+		return fmt.Errorf("failed to reconcile HTTPRoute: %w", err)
+	}
+	logger.V(1).Info("HTTPRoute reconciled")
 
 	// 9. Reconcile ServiceMonitor (if enabled)
 	if err := r.reconcileServiceMonitor(ctx, instance); err != nil {
@@ -1502,6 +1509,76 @@ func (r *OpenClawInstanceReconciler) reconcileIngress(ctx context.Context, insta
 		return err
 	}
 
+	return nil
+}
+
+// reconcileHTTPRoute reconciles a Gateway API HTTPRoute (gateway.networking.k8s.io/v1).
+// It is built as an unstructured object so the Gateway API Go module is not a build
+// dependency. When disabled (or unset), any existing HTTPRoute is deleted. If the
+// Gateway API CRDs are not installed, reconciliation is skipped silently.
+func (r *OpenClawInstanceReconciler) reconcileHTTPRoute(ctx context.Context, instance *openclawv1alpha1.OpenClawInstance) error {
+	enabled := instance.Spec.Networking.HTTPRoute != nil && instance.Spec.Networking.HTTPRoute.Enabled
+
+	if !enabled {
+		// Cleanup: delete existing HTTPRoute if it exists
+		existing := &unstructured.Unstructured{}
+		existing.SetGroupVersionKind(resources.HTTPRouteGVK())
+		existing.SetName(resources.HTTPRouteName(instance))
+		existing.SetNamespace(instance.Namespace)
+		if err := r.Delete(ctx, existing); err != nil && !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
+			return err
+		}
+		instance.Status.ManagedResources.HTTPRoute = ""
+		meta.RemoveStatusCondition(&instance.Status.Conditions, openclawv1alpha1.ConditionTypeHTTPRouteReady)
+		return nil
+	}
+
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(resources.HTTPRouteGVK())
+	route.SetName(resources.HTTPRouteName(instance))
+	route.SetNamespace(instance.Namespace)
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, route, func() error {
+		desired := resources.BuildHTTPRoute(instance)
+
+		if spec, ok := desired.Object["spec"]; ok {
+			route.Object["spec"] = spec
+		}
+		route.SetLabels(desired.GetLabels())
+		route.SetAnnotations(desired.GetAnnotations())
+
+		ownerRef := metav1.OwnerReference{
+			APIVersion: instance.APIVersion,
+			Kind:       instance.Kind,
+			Name:       instance.Name,
+			UID:        instance.UID,
+			Controller: resources.Ptr(true),
+		}
+		route.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
+		return nil
+	})
+	if meta.IsNoMatchError(err) {
+		// Gateway API CRDs not installed - skip silently
+		meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
+			Type:    openclawv1alpha1.ConditionTypeHTTPRouteReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  "GatewayAPINotInstalled",
+			Message: "Gateway API CRDs (gateway.networking.k8s.io) are not installed",
+		})
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	instance.Status.ManagedResources.HTTPRoute = route.GetName()
+	meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
+		Type:    openclawv1alpha1.ConditionTypeHTTPRouteReady,
+		Status:  metav1.ConditionTrue,
+		Reason:  "HTTPRouteReconciled",
+		Message: "Gateway API HTTPRoute reconciled successfully",
+	})
+	r.Recorder.Event(instance, corev1.EventTypeNormal, "HTTPRouteReconciled", "Gateway API HTTPRoute reconciled successfully")
 	return nil
 }
 

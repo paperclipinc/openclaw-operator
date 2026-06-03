@@ -321,6 +321,44 @@ _Appears in:_
 | `folder` _string_ | Folder is the Grafana folder to place the dashboards in | OpenClaw | Optional: \{\} <br /> |
 
 
+#### HTTPRouteParentRef
+
+
+
+HTTPRouteParentRef identifies a Gateway that the HTTPRoute attaches to
+
+
+
+_Appears in:_
+- [HTTPRouteSpec](#httproutespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the name of the Gateway |  | MinLength: 1 <br /> |
+| `namespace` _string_ | Namespace is the namespace of the Gateway.<br />Defaults to the same namespace as the HTTPRoute. |  | Optional: \{\} <br /> |
+| `sectionName` _string_ | SectionName is the name of a specific listener on the Gateway to attach to. |  | Optional: \{\} <br /> |
+
+
+#### HTTPRouteSpec
+
+
+
+HTTPRouteSpec defines a Gateway API HTTPRoute configuration
+
+
+
+_Appears in:_
+- [NetworkingSpec](#networkingspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables HTTPRoute creation | false | Optional: \{\} <br /> |
+| `parentRefs` _[HTTPRouteParentRef](#httprouteparentref) array_ | ParentRefs specifies the Gateways this HTTPRoute attaches to.<br />Each ref identifies a Gateway by name (and optionally namespace and sectionName). |  | Optional: \{\} <br /> |
+| `hostnames` _string array_ | Hostnames specifies the hostnames matched by this HTTPRoute. |  | Optional: \{\} <br /> |
+| `port` _integer_ | Port is the backend Service port number to route traffic to.<br />Defaults to the gateway port (18789) when not set. |  | Maximum: 65535 <br />Minimum: 1 <br />Optional: \{\} <br /> |
+| `annotations` _object (keys:string, values:string)_ | Annotations to add to the HTTPRoute |  | Optional: \{\} <br /> |
+
+
 #### ImageSpec
 
 
@@ -526,6 +564,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `service` _[ServiceSpec](#servicespec)_ | Service configures the Kubernetes Service |  | Optional: \{\} <br /> |
 | `ingress` _[IngressSpec](#ingressspec)_ | Ingress configures the Kubernetes Ingress |  | Optional: \{\} <br /> |
+| `httpRoute` _[HTTPRouteSpec](#httproutespec)_ | HTTPRoute configures a Gateway API HTTPRoute.<br />This is an alternative to Ingress for clusters using the Gateway API<br />(gateway.networking.k8s.io). The Gateway API CRDs must be installed. |  | Optional: \{\} <br /> |
 
 
 #### ObservabilitySpec
