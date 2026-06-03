@@ -193,6 +193,7 @@ type OpenClawInstanceSpec struct {
 }
 
 // ImageSpec defines the container image configuration
+// +kubebuilder:validation:XValidation:rule="(has(self.tag) && size(self.tag) > 0) || (has(self.digest) && size(self.digest) > 0)",message="spec.image: one of tag or digest must be set (pinning to an empty tag is not supported, pick a specific upstream release tag or a digest)"
 type ImageSpec struct {
 	// Repository is the container image repository
 	// +kubebuilder:default="ghcr.io/openclaw/openclaw"
