@@ -1,0 +1,111 @@
+name: Conformance
+
+on:
+  schedule:
+    - cron: '0 4 * * *'    # 04:00 UTC nightly
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    paths:
+      - 'test/conformance/**'
+      - '.github/workflows/conformance.yaml'
+  workflow_dispatch:
+
+jobs:
+  negative:
+    name: Negative (API server deny paths)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: go.mod }
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: openclaw-conformance
+          config: hack/kind-config.yaml
+      - uses: azure/setup-helm@v4
+      - run: make docker-build IMG=openclaw-operator:dev
+      - run: make conformance-install IMG=openclaw-operator:dev CONFORMANCE_KIND_CLUSTER=openclaw-conformance
+      - run: make conformance-negative
+
+  idempotency:
+    name: Idempotency
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: go.mod }
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: openclaw-conformance
+          config: hack/kind-config.yaml
+      - uses: azure/setup-helm@v4
+      - run: make docker-build IMG=openclaw-operator:dev
+      - run: make conformance-install IMG=openclaw-operator:dev CONFORMANCE_KIND_CLUSTER=openclaw-conformance
+      - run: make conformance-idempotency
+
+  gitops:
+    name: GitOps coexistence
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: go.mod }
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: openclaw-conformance
+          config: hack/kind-config.yaml
+      - uses: azure/setup-helm@v4
+      - run: make docker-build IMG=openclaw-operator:dev
+      - run: make conformance-install IMG=openclaw-operator:dev CONFORMANCE_KIND_CLUSTER=openclaw-conformance
+      - run: make conformance-gitops
+
+  failure-modes:
+    name: Failure modes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: go.mod }
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: openclaw-conformance
+          config: hack/kind-config.yaml
+      - uses: azure/setup-helm@v4
+      - run: make docker-build IMG=openclaw-operator:dev
+      - run: make conformance-install IMG=openclaw-operator:dev CONFORMANCE_KIND_CLUSTER=openclaw-conformance
+      - run: make conformance-failure
+
+  upgrade:
+    name: Upgrade path matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: go.mod }
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: openclaw-conformance
+          config: hack/kind-config.yaml
+      - uses: azure/setup-helm@v4
+      - run: make docker-build IMG=openclaw-operator:dev
+      - run: make conformance-install IMG=openclaw-operator:dev CONFORMANCE_KIND_CLUSTER=openclaw-conformance
+      - env:
+          CONFORMANCE_FULL: '1'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: make conformance-upgrade
+
+  # PR runs are advisory; nightly and release-tag runs gate releases.
+  required:
+    name: Conformance gate
+    needs: [negative, idempotency, gitops, failure-modes, upgrade]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - run: echo "All conformance jobs passed."

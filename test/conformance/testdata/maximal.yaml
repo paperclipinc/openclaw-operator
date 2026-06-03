@@ -1,0 +1,39 @@
+apiVersion: openclaw.rocks/v1alpha1
+kind: OpenClawInstance
+metadata:
+  name: conformance-maximal
+spec:
+  image:
+    repository: ghcr.io/openclaw/openclaw
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
+  config:
+    raw:
+      agents:
+        defaults:
+          sandbox: true
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 4Gi
+  storage:
+    persistence:
+      enabled: true
+      size: 5Gi
+  security:
+    podSecurityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      runAsNonRoot: true
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+    networkPolicy:
+      enabled: true
+  networking:
+    service:
+      type: ClusterIP

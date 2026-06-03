@@ -1,0 +1,31 @@
+apiVersion: openclaw.rocks/v1alpha1
+kind: OpenClawInstance
+metadata:
+  name: conformance-ingress
+spec:
+  image:
+    repository: ghcr.io/openclaw/openclaw
+    tag: v1.0.0
+  resources:
+    limits:
+      cpu: "2"
+      memory: 2Gi
+  storage:
+    persistence:
+      enabled: true
+      size: 1Gi
+  networking:
+    service:
+      type: ClusterIP
+    ingress:
+      enabled: true
+      className: nginx
+      hosts:
+        - host: openclaw.conformance.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - hosts:
+            - openclaw.conformance.local
+          secretName: openclaw-conformance-tls
