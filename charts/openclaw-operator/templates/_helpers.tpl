@@ -142,6 +142,19 @@ kubebuilder-generated config/rbac/role.yaml.
 - apiGroups: ["openclaw.rocks"]
   resources: ["openclawselfconfigs/finalizers"]
   verbs: ["update"]
+{{- end }}
+
+{{/*
+Cluster-scoped manager rules. OpenClawClusterDefaults is a cluster-scoped
+singleton (#457), so the operator needs these permissions via a ClusterRole
+even when it watches only specific namespaces -- a namespaced Role cannot grant
+access to a cluster-scoped resource (#529). Kept separate from managerRules so
+the namespaced-mode per-namespace Roles do not carry an ineffective rule, while
+the cluster-wide ClusterRole renders both sets.
+hack/check-helm-rbac-sync.sh parses this define alongside managerRules so the
+union is asserted to be a superset of config/rbac/role.yaml.
+*/}}
+{{- define "openclaw-operator.clusterScopedRules" -}}
 # OpenClawClusterDefaults singleton (#457)
 - apiGroups: ["openclaw.rocks"]
   resources: ["openclawclusterdefaults"]

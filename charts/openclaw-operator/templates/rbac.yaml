@@ -35,6 +35,34 @@ subjects:
     name: {{ $saName }}
     namespace: {{ $saNamespace }}
 {{- end }}
+---
+# OpenClawClusterDefaults is cluster-scoped (#457). Even when watching specific
+# namespaces, the operator must be granted access via a ClusterRole -- a
+# namespaced Role cannot grant access to a cluster-scoped resource, so without
+# this the manager cache fails to sync and the operator shuts down (#529).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $managerName }}-cluster
+  labels:
+    {{- $labels | nindent 4 }}
+rules:
+  {{- include "openclaw-operator.clusterScopedRules" . | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $managerBinding }}-cluster
+  labels:
+    {{- $labels | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $managerName }}-cluster
+subjects:
+  - kind: ServiceAccount
+    name: {{ $saName }}
+    namespace: {{ $saNamespace }}
 {{- else }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -44,6 +72,7 @@ metadata:
     {{- $labels | nindent 4 }}
 rules:
   {{- include "openclaw-operator.managerRules" . | nindent 2 }}
+  {{- include "openclaw-operator.clusterScopedRules" . | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

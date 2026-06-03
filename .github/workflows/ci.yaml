@@ -71,6 +71,17 @@ jobs:
       - name: Check Helm chart CRD templates match generated CRDs
         run: bash hack/sync-chart-crds.sh --check
 
+  helm-cluster-rbac:
+    name: Helm Cluster RBAC
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      - name: Check cluster-scoped RBAC is granted in all watch modes
+        run: bash hack/check-helm-cluster-rbac.sh
+
   docs-build:
     name: Docs Build
     runs-on: ubuntu-latest
