@@ -1,0 +1,44 @@
+name: Verify Signing (drift detection)
+
+on:
+  schedule:
+    # Mondays at 13:00 UTC. Catches infra-broken signatures before users hit them.
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Install gh
+        run: |
+          type -p gh >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y gh)
+
+      - name: Verify latest release
+        id: verify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          make verify-signing
+          rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Open issue on failure
+        if: steps.verify.outputs.rc != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "[drift] Cosign verify failed for latest release" \
+            --label infra-broken \
+            --body "The weekly verify-signing workflow failed. The latest release's image is no longer cosign-verifiable. Investigate: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

@@ -69,6 +69,20 @@ scorecard: operator-sdk ## Run operator-sdk scorecard tests.
 bench: ## Run benchmarks for resource builders.
 	go test ./internal/resources/ -bench=. -benchmem -run=^$$ -count=1
 
+.PHONY: verify-signing
+verify-signing: ## Verify the latest published release is Cosign-signed and SBOM-attested.
+	@VERSION=$$(gh release view --repo paperclipinc/openclaw-operator --json tagName --jq .tagName); \
+	IMAGE="ghcr.io/paperclipinc/openclaw-operator:$${VERSION}"; \
+	echo "Verifying $${IMAGE}..."; \
+	cosign verify "$${IMAGE}" \
+	  --certificate-identity-regexp 'https://github.com/paperclipinc/openclaw-operator/.github/workflows/.*' \
+	  --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null || { echo "::error::signature verification failed for $${IMAGE}"; exit 1; }; \
+	echo "Verifying SBOM attestation..."; \
+	cosign verify-attestation "$${IMAGE}" --type spdxjson \
+	  --certificate-identity-regexp 'https://github.com/paperclipinc/openclaw-operator/.github/workflows/.*' \
+	  --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null || { echo "::error::SBOM attestation verification failed for $${IMAGE}"; exit 1; }; \
+	echo "OK: $${IMAGE} is signed and SBOM-attested."
+
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter.
 	$(GOLANGCI_LINT) run
