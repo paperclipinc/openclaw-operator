@@ -110,6 +110,10 @@ kubebuilder-generated config/rbac/role.yaml.
 - apiGroups: ["networking.k8s.io"]
   resources: ["networkpolicies", "ingresses"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Gateway API
+- apiGroups: ["gateway.networking.k8s.io"]
+  resources: ["httproutes"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 # Policy
 - apiGroups: ["policy"]
   resources: ["poddisruptionbudgets"]
