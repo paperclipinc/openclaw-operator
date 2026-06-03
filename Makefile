@@ -69,6 +69,75 @@ scorecard: operator-sdk ## Run operator-sdk scorecard tests.
 bench: ## Run benchmarks for resource builders.
 	go test ./internal/resources/ -bench=. -benchmem -run=^$$ -count=1
 
+##@ Conformance
+
+CONFORMANCE_KIND_CLUSTER ?= openclaw-conformance
+
+.PHONY: conformance-kind-up
+conformance-kind-up: ## Spin up a fresh kind cluster for conformance.
+	kind create cluster --name $(CONFORMANCE_KIND_CLUSTER) --config hack/kind-config.yaml || true
+
+.PHONY: conformance-kind-down
+conformance-kind-down: ## Tear down the conformance kind cluster.
+	kind delete cluster --name $(CONFORMANCE_KIND_CLUSTER)
+
+.PHONY: conformance-install
+conformance-install: docker-build ## Install operator + CRDs onto the conformance cluster.
+	kind load docker-image $(IMG) --name $(CONFORMANCE_KIND_CLUSTER)
+	helm upgrade --install openclaw-operator charts/openclaw-operator \
+	  --namespace openclaw-system --create-namespace \
+	  --set image.repository=$(shell echo $(IMG) | cut -d: -f1) \
+	  --set image.tag=$(shell echo $(IMG) | cut -d: -f2) \
+	  --set image.pullPolicy=IfNotPresent \
+	  --wait --timeout=10m \
+	  || { \
+	    echo "::group::diagnostics"; \
+	    kubectl get all -n openclaw-system || true; \
+	    kubectl describe deploy/openclaw-operator -n openclaw-system || true; \
+	    kubectl get pods -n openclaw-system -o wide || true; \
+	    kubectl logs -n openclaw-system -l app.kubernetes.io/name=openclaw-operator --all-containers=true --tail=200 || true; \
+	    echo "::endgroup::"; \
+	    exit 1; \
+	  }
+
+.PHONY: conformance
+conformance: ## Run the full conformance suite. Requires KUBECONFIG to a cluster with operator installed.
+	cd test/conformance && go test -v -timeout 60m -ginkgo.v ./...
+
+.PHONY: conformance-negative
+conformance-negative: ## Run the negative (API server deny path) conformance category.
+	cd test/conformance && go test -v -timeout 10m -ginkgo.v -ginkgo.focus="negative" ./...
+
+.PHONY: conformance-idempotency
+conformance-idempotency: ## Run the idempotency conformance category.
+	cd test/conformance && go test -v -timeout 30m -ginkgo.v -ginkgo.focus="idempotency" ./...
+
+.PHONY: conformance-upgrade
+conformance-upgrade: ## Run the upgrade-path conformance category.
+	cd test/conformance && go test -v -timeout 60m -ginkgo.v -ginkgo.focus="upgrade-path matrix" ./...
+
+.PHONY: conformance-gitops
+conformance-gitops: ## Run the GitOps coexistence conformance category.
+	cd test/conformance && go test -v -timeout 20m -ginkgo.v -ginkgo.focus="GitOps coexistence" ./...
+
+.PHONY: conformance-failure
+conformance-failure: ## Run the failure-modes conformance category.
+	cd test/conformance && go test -v -timeout 20m -ginkgo.v -ginkgo.focus="failure modes" ./...
+
+.PHONY: verify-signing
+verify-signing: ## Verify the latest published release is Cosign-signed and SBOM-attested.
+	@VERSION=$$(gh release view --repo paperclipinc/openclaw-operator --json tagName --jq .tagName); \
+	IMAGE="ghcr.io/paperclipinc/openclaw-operator:$${VERSION}"; \
+	echo "Verifying $${IMAGE}..."; \
+	cosign verify "$${IMAGE}" \
+	  --certificate-identity-regexp 'https://github.com/paperclipinc/openclaw-operator/.github/workflows/.*' \
+	  --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null || { echo "::error::signature verification failed for $${IMAGE}"; exit 1; }; \
+	echo "Verifying SBOM attestation..."; \
+	cosign verify-attestation "$${IMAGE}" --type spdxjson \
+	  --certificate-identity-regexp 'https://github.com/paperclipinc/openclaw-operator/.github/workflows/.*' \
+	  --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null || { echo "::error::SBOM attestation verification failed for $${IMAGE}"; exit 1; }; \
+	echo "OK: $${IMAGE} is signed and SBOM-attested."
+
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter.
 	$(GOLANGCI_LINT) run

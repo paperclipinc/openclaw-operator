@@ -34,12 +34,21 @@ jobs:
           TAG="${{ steps.version.outputs.tag }}"
           BUNDLE_DIR="submission/operators/openclaw-operator/${VERSION}"
 
+          # Resolve the published image to an immutable digest reference so the
+          # submitted bundle is pinned (OLM best practice). Fall back to the
+          # floating tag if the digest cannot be resolved (e.g. registry hiccup).
+          IMG="ghcr.io/paperclipinc/openclaw-operator"
+          DIGEST="$(docker buildx imagetools inspect "${IMG}:${TAG}" --format '{{ .Manifest.Digest }}' 2>/dev/null || true)"
+          if [ -n "${DIGEST}" ]; then IMG_REF="${IMG}@${DIGEST}"; else IMG_REF="${IMG}:${TAG}"; fi
+          echo "Pinning image to: ${IMG_REF}"
+
           mkdir -p "${BUNDLE_DIR}/manifests" "${BUNDLE_DIR}/metadata"
 
-          # Copy and version the CSV
+          # Copy and version the CSV. The operator image is rewritten to the
+          # pinned IMG_REF in both spec.install (deployment) and spec.relatedImages.
           sed \
             -e "s/openclaw-operator\.v[0-9]\+\.[0-9]\+\.[0-9]\+/openclaw-operator.v${VERSION}/g" \
-            -e "s|ghcr.io/paperclipinc/openclaw-operator:v[0-9]\+\.[0-9]\+\.[0-9]\+|ghcr.io/paperclipinc/openclaw-operator:${TAG}|g" \
+            -e "s|ghcr.io/paperclipinc/openclaw-operator:v[0-9]\+\.[0-9]\+\.[0-9]\+|${IMG_REF}|g" \
             -e "s/createdAt: .*/createdAt: \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"/" \
             -e "s/^  version: [0-9]\+\.[0-9]\+\.[0-9]\+/  version: ${VERSION}/" \
             bundle/manifests/openclaw-operator.v*.clusterserviceversion.yaml \
@@ -134,12 +143,21 @@ jobs:
           TAG="${{ steps.version.outputs.tag }}"
           BUNDLE_DIR="submission/operators/openclaw-operator/${VERSION}"
 
+          # Resolve the published image to an immutable digest reference so the
+          # submitted bundle is pinned (OLM best practice). Fall back to the
+          # floating tag if the digest cannot be resolved (e.g. registry hiccup).
+          IMG="ghcr.io/paperclipinc/openclaw-operator"
+          DIGEST="$(docker buildx imagetools inspect "${IMG}:${TAG}" --format '{{ .Manifest.Digest }}' 2>/dev/null || true)"
+          if [ -n "${DIGEST}" ]; then IMG_REF="${IMG}@${DIGEST}"; else IMG_REF="${IMG}:${TAG}"; fi
+          echo "Pinning image to: ${IMG_REF}"
+
           mkdir -p "${BUNDLE_DIR}/manifests" "${BUNDLE_DIR}/metadata"
 
-          # Copy and version the CSV
+          # Copy and version the CSV. The operator image is rewritten to the
+          # pinned IMG_REF in both spec.install (deployment) and spec.relatedImages.
           sed \
             -e "s/openclaw-operator\.v[0-9]\+\.[0-9]\+\.[0-9]\+/openclaw-operator.v${VERSION}/g" \
-            -e "s|ghcr.io/paperclipinc/openclaw-operator:v[0-9]\+\.[0-9]\+\.[0-9]\+|ghcr.io/paperclipinc/openclaw-operator:${TAG}|g" \
+            -e "s|ghcr.io/paperclipinc/openclaw-operator:v[0-9]\+\.[0-9]\+\.[0-9]\+|${IMG_REF}|g" \
             -e "s/createdAt: .*/createdAt: \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"/" \
             -e "s/^  version: [0-9]\+\.[0-9]\+\.[0-9]\+/  version: ${VERSION}/" \
             bundle/manifests/openclaw-operator.v*.clusterserviceversion.yaml \

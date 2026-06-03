@@ -166,10 +166,14 @@ make deploy IMG=ghcr.io/paperclipinc/openclaw-operator:latest
 <summary>Restrict the operator to specific namespaces</summary>
 
 To run the operator with namespaced RBAC instead of cluster-wide permissions,
-list the namespaces it should watch. The chart switches from
-`ClusterRole`/`ClusterRoleBinding` to per-namespace `Role`/`RoleBinding`, and
-passes `--watch-namespaces` to the operator so its informer cache is scoped
-to that list (plus the operator's own namespace, for backup credentials).
+list the namespaces it should watch. The chart switches the namespace-scoped
+permissions from a `ClusterRole`/`ClusterRoleBinding` to per-namespace
+`Role`/`RoleBinding`, and passes `--watch-namespaces` to the operator so its
+informer cache is scoped to that list (plus the operator's own namespace, for
+backup credentials). A small `ClusterRole`/`ClusterRoleBinding` is still created
+for the cluster-scoped `OpenClawClusterDefaults` resource, which the operator
+watches regardless of namespace scoping -- a namespaced `Role` cannot grant
+access to a cluster-scoped resource.
 
 ```bash
 helm install openclaw-operator \
