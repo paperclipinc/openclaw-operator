@@ -243,6 +243,7 @@ func otelCollectorConfig(instance *openclawv1alpha1.OpenClawInstance) string {
 exporters:
   prometheus:
     endpoint: 0.0.0.0:%d
+    metric_expiration: 8760h
 
 service:
   pipelines:

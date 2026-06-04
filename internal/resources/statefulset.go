@@ -2016,7 +2016,7 @@ func buildOTelCollectorContainer(instance *openclawv1alpha1.OpenClawInstance) co
 		Name:                     "otel-collector",
 		Image:                    image,
 		ImagePullPolicy:          corev1.PullIfNotPresent,
-		Args:                     []string{"--config=/etc/otel-collector/config.yaml"},
+		Args:                     []string{"--config=/etc/otel-collector/" + OTelCollectorConfigKey},
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 		SecurityContext: &corev1.SecurityContext{
@@ -2049,9 +2049,8 @@ func buildOTelCollectorContainer(instance *openclawv1alpha1.OpenClawInstance) co
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
-				Name:      "config",
-				MountPath: "/etc/otel-collector/config.yaml",
-				SubPath:   OTelCollectorConfigKey,
+				Name:      "otel-collector-config",
+				MountPath: "/etc/otel-collector",
 				ReadOnly:  true,
 			},
 		},
@@ -2181,6 +2180,28 @@ func buildVolumes(instance *openclawv1alpha1.OpenClawInstance, skillPacks *Resol
 			},
 		},
 	})
+
+	// OTel Collector config — directory mount (no subPath) so the kubelet
+	// uses an atomic symlink that tolerates ConfigMap/pod creation races.
+	if IsMetricsEnabled(instance) {
+		volumes = append(volumes, corev1.Volume{
+			Name: "otel-collector-config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: ConfigMapName(instance),
+					},
+					DefaultMode: &defaultMode,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  OTelCollectorConfigKey,
+							Path: OTelCollectorConfigKey,
+						},
+					},
+				},
+			},
+		})
+	}
 
 	// Workspace init volume (ConfigMap with seed files)
 	if hasWorkspaceFiles(instance, skillPacks) {
