@@ -2493,6 +2493,9 @@ func TestBuildConfigMap_OTelCollectorConfig(t *testing.T) {
 		t.Error("OTel config should contain OTLP receiver")
 	}
 	if !strings.Contains(config, "prometheus:") {
+		t.Error("OTel Collector config should contain prometheus exporter")
+	}
+	if !strings.Contains(config, "metric_expiration: 0s") {
 		t.Error("OTel config should contain Prometheus exporter")
 	}
 	if !strings.Contains(config, fmt.Sprintf("0.0.0.0:%d", DefaultMetricsPort)) {
