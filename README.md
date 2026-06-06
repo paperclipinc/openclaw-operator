@@ -566,6 +566,10 @@ spec:
     - "some-other-plugin"
 ```
 
+For an X/Twitter workflow that installs TweetClaw from npm, injects the Xquik
+API key through a Kubernetes Secret, and keeps social account actions
+human-reviewed, see the [TweetClaw plugin workflow](docs/tweetclaw-plugin-workflow.md).
+
 This is the layout the OpenClaw gateway's plugin discovery expects - it scans direct subdirectories of `~/.openclaw/extensions/` for plugin manifests and skips `node_modules/` entirely. The init container shells out to `openclaw plugins install clawhub:<pkg>` (the OpenClaw CLI's ClawHub installer) so plugins published with `workspace:*` dependency markers — such as the first-party `@openclaw/matrix` — resolve correctly. Raw `npm install` rejects those with `EUNSUPPORTEDPROTOCOL`.
 
 npm lifecycle scripts are disabled globally on the init container (`NPM_CONFIG_IGNORE_SCRIPTS=true`) to mitigate supply chain attacks. The PVC backs `~/.openclaw/`, so installs persist across pod restarts.

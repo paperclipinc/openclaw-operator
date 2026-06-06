@@ -26,6 +26,8 @@ For the project pitch and a feature overview, see the
 - [Full example](full-example.md): an end-to-end working configuration.
 - [Custom providers](custom-providers.md): wire any AI provider via
   environment variables.
+- [TweetClaw plugin workflow](tweetclaw-plugin-workflow.md): deploy an
+  X/Twitter OpenClaw plugin with Kubernetes Secrets and approval boundaries.
 - [API reference](api-reference.md): every field on every CRD.
 
 ## Operations
