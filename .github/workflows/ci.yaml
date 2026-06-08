@@ -53,6 +53,15 @@ jobs:
           fi
           echo "No unconditional Update calls on managed resources found."
 
+  chart-image-repository:
+    name: Chart Image Repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check chart image.repository uses the canonical namespace
+        run: bash hack/check-chart-image-repository.sh
+
   helm-rbac-sync:
     name: Helm RBAC Sync
     runs-on: ubuntu-latest

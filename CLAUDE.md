@@ -170,6 +170,7 @@ All checks run on every push to main and every PR:
 | **Test** | `make test` (unit + envtest integration) |
 | **Security Scan** | gosec + Trivy (CRITICAL/HIGH) |
 | **Reconcile Guard** | Grep check preventing bare `r.Update()` on managed resources |
+| **Chart Image Repository** | Verifies the chart `image.repository` default points at the canonical `ghcr.io/paperclipinc` namespace (guards against the #536 stale-namespace regression) |
 | **Helm RBAC Sync** | Verifies Helm chart ClusterRole contains all kubebuilder RBAC permissions |
 | **Docs Build** | `mkdocs build --strict` against `docs-site/`; uploads preview artifact on PRs |
 | **API Docs Sync** | Verifies `docs/api-reference.md` matches output of `make api-docs` |
