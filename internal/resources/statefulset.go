@@ -2181,7 +2181,7 @@ func buildVolumes(instance *openclawv1alpha1.OpenClawInstance, skillPacks *Resol
 		},
 	})
 
-	// OTel Collector config — directory mount (no subPath) so the kubelet
+	// OTel Collector config - directory mount (no subPath) so the kubelet
 	// uses an atomic symlink that tolerates ConfigMap/pod creation races.
 	if IsMetricsEnabled(instance) {
 		volumes = append(volumes, corev1.Volume{
