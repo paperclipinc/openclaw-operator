@@ -2493,6 +2493,9 @@ func TestBuildConfigMap_OTelCollectorConfig(t *testing.T) {
 		t.Error("OTel config should contain OTLP receiver")
 	}
 	if !strings.Contains(config, "prometheus:") {
+		t.Error("OTel Collector config should contain prometheus exporter")
+	}
+	if !strings.Contains(config, "metric_expiration: 8760h") {
 		t.Error("OTel config should contain Prometheus exporter")
 	}
 	if !strings.Contains(config, fmt.Sprintf("0.0.0.0:%d", DefaultMetricsPort)) {
@@ -2523,10 +2526,10 @@ func TestBuildStatefulSet_OTelCollectorContainer(t *testing.T) {
 		found = true
 		// Verify metrics port is on the collector
 		assertContainerPort(t, c.Ports, "metrics", DefaultMetricsPort)
-		// Verify config volume mount
+		// Verify config volume mount (directory mount, no SubPath)
 		var hasConfigMount bool
 		for _, vm := range c.VolumeMounts {
-			if vm.SubPath == OTelCollectorConfigKey {
+			if vm.Name == "otel-collector-config" && vm.MountPath == "/etc/otel-collector" {
 				hasConfigMount = true
 			}
 		}
