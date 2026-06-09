@@ -1,4 +1,4 @@
-# OpenClawInstance example for the TweetClaw OpenClaw plugin.
+# OpenClawInstance example for an npm-sourced social plugin.
 #
 # Replace placeholder Secret values before applying. Keep real API keys in a
 # Kubernetes Secret or ExternalSecret, not in Git.

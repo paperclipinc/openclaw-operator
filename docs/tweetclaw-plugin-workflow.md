@@ -1,29 +1,30 @@
 ---
-title: TweetClaw Plugin Workflow
-description: Deploy TweetClaw for reviewed X/Twitter automation through OpenClawInstance.
+title: External Social Plugin Workflow
+description: Deploy an npm-sourced OpenClaw plugin with Secrets, persistence, and approval boundaries.
 ---
 
-# TweetClaw Plugin Workflow
+# External Social Plugin Workflow
 
-Use this recipe when an OpenClaw instance needs reviewed X/Twitter work such as
-searching tweets, searching tweet replies, exporting followers, looking up users,
-reviewing media context, monitoring tweets, checking webhooks, or preparing
-approval-gated public actions.
+Use this recipe when an OpenClaw instance needs an npm-sourced plugin that reads
+external social data, stores credentials in Kubernetes Secrets, and keeps public
+account actions behind human review.
 
 The operator owns Kubernetes lifecycle, security defaults, Secrets, persistence,
 and plugin installation. OpenClaw owns plugin discovery and execution. TweetClaw
-is installed as an optional OpenClaw plugin.
+is used here as a concrete plugin because it exercises the operator paths that
+matter for many third-party plugins: npm source selection, Secret-backed
+configuration, network egress, persistent plugin files, and workspace guidance.
 
 ## What This Uses
 
-- `spec.plugins` to install the TweetClaw plugin before OpenClaw starts.
-- `envFrom` to inject the Xquik API key from a Kubernetes Secret.
+- `spec.plugins` to install an npm-sourced plugin before OpenClaw starts.
+- `envFrom` to inject the plugin API key from a Kubernetes Secret.
 - The default NetworkPolicy, which allows DNS and HTTPS egress for npm package
-  resolution and Xquik API calls.
-- A workspace note that tells agents how to keep public social actions
-  human-reviewed.
+  resolution and plugin API calls.
+- A workspace note that tells agents how to handle untrusted social data and
+  keep public account actions human-reviewed.
 
-Use the `npm:` prefix for TweetClaw:
+Use the `npm:` source prefix for packages that should come from npm:
 
 ```yaml
 spec:
@@ -32,8 +33,8 @@ spec:
 ```
 
 The prefix matters because bare plugin entries are resolved as ClawHub
-identifiers by the OpenClaw CLI. TweetClaw's canonical package is the npm
-package `@xquik/tweetclaw`.
+identifiers by the OpenClaw CLI. This example pins TweetClaw to its canonical
+npm package, `@xquik/tweetclaw`.
 
 ## Minimal Manifest
 
