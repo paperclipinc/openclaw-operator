@@ -12,7 +12,7 @@
 
 **Self-host [OpenClaw](https://openclaw.ai) AI agents on Kubernetes with production-grade security, observability, and lifecycle management.**
 
-OpenClaw is an AI agent platform that acts on your behalf across Telegram, Discord, WhatsApp, and Signal. It manages your inbox, calendar, smart home, and more through 50+ integrations. While [Paperclip Inc.](https://paperclip.inc/openclaw) offers fully managed hosting, this operator lets you run OpenClaw on your own infrastructure with the same operational rigor.
+OpenClaw is an AI agent platform that acts on your behalf across Telegram, Discord, WhatsApp, and Signal. It manages your inbox, calendar, smart home, and more through 50+ integrations. While [Paperclip Inc.](https://paperclip.inc) offers fully managed hosting, this operator lets you run OpenClaw on your own infrastructure with the same operational rigor.
 
 ---
 
@@ -77,7 +77,7 @@ Every request is validated against the instance's allowlist policy. Protected co
 | **Config Modes** | Merge or overwrite | `overwrite` replaces config on restart; `merge` deep-merges with PVC config, preserving runtime changes. Config is restored on every container restart via init container. |
 | **Force Paths** | Operator-owned paths under merge | `config.forcePaths` lists dot-paths the init container rebuilds from the CR on every restart even under `mergeMode: merge` -- lets managed deployers keep operator-owned config (auth, allowed providers, sandbox image) immune to tenant edits while user-owned config persists |
 | **Skills** | Declarative install | Install ClawHub skills, npm packages, or GitHub-hosted skill packs via `spec.skills` - supports `npm:` and `pack:` prefixes |
-| **Plugins** | Declarative install | Install OpenClaw plugins via `spec.plugins` - npm packages installed in a secure init container |
+| **Plugins** | Declarative install | Install OpenClaw plugins via `spec.plugins` - resolved through the OpenClaw CLI ClawHub installer in a secure init container |
 | **Runtime Deps** | pnpm & Python/uv | Built-in init containers install pnpm (via corepack) or Python 3.12 + uv for MCP servers and skills |
 | **Auto-Update** | OCI registry polling | Opt-in version tracking: checks the registry for new semver releases, backs up first, rolls out, and auto-rolls back if the new version fails health checks |
 | **Scalable** | Auto-scaling | HPA integration with CPU and memory metrics, min/max replica bounds, automatic StatefulSet replica management |
@@ -566,7 +566,9 @@ spec:
     - "some-other-plugin"
 ```
 
-This is the layout the OpenClaw gateway's plugin discovery expects - it scans direct subdirectories of `~/.openclaw/extensions/` for plugin manifests and skips `node_modules/` entirely. The init container shells out to `openclaw plugins install clawhub:<pkg>` (the OpenClaw CLI's ClawHub installer) so plugins published with `workspace:*` dependency markers — such as the first-party `@openclaw/matrix` — resolve correctly. Raw `npm install` rejects those with `EUNSUPPORTEDPROTOCOL`.
+Plugin entries are resolved through the OpenClaw CLI's ClawHub installer, not raw `npm install`. An optional `npm:` prefix is accepted for compatibility and stripped before installation, so `npm:@scope/plugin` and `@scope/plugin` both run as `openclaw plugins install clawhub:@scope/plugin`. Use `spec.skills` when you need npm package source selection for skills.
+
+This is the layout the OpenClaw gateway's plugin discovery expects - it scans direct subdirectories of `~/.openclaw/extensions/` for plugin manifests and skips `node_modules/` entirely. The init container shells out to `openclaw plugins install clawhub:<pkg>` so plugins published with `workspace:*` dependency markers, such as the first-party `@openclaw/matrix`, resolve correctly. Raw `npm install` rejects those with `EUNSUPPORTEDPROTOCOL`.
 
 npm lifecycle scripts are disabled globally on the init container (`NPM_CONFIG_IGNORE_SCRIPTS=true`) to mitigate supply chain attacks. The PVC backs `~/.openclaw/`, so installs persist across pod restarts.
 
@@ -1335,7 +1337,7 @@ See the full [roadmap](ROADMAP.md) for details.
 
 ## Don't Want to Self-Host?
 
-[Paperclip Inc.](https://paperclip.inc/openclaw) offers fully managed hosting starting at **EUR 19/mo**. No Kubernetes cluster required. Setup, updates, and 24/7 uptime handled for you.
+[Paperclip Inc.](https://paperclip.inc) offers fully managed hosting starting at **EUR 19/mo**. No Kubernetes cluster required. Setup, updates, and 24/7 uptime handled for you.
 
 ## Contributing
 
