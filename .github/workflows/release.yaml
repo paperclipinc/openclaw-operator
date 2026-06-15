@@ -120,6 +120,7 @@ jobs:
     permissions:
       contents: write
       packages: write
+      id-token: write  # keyless cosign signing of the chart artifact
 
     steps:
       - name: Checkout
@@ -132,6 +133,9 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v4
 
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
       - name: Extract version
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
@@ -143,8 +147,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Package and push Helm chart to OCI registry
+      - name: Package, push, and sign Helm chart
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          OWNER="${{ steps.owner.outputs.name }}"
           helm package charts/openclaw-operator --version "${VERSION}" --app-version "${VERSION}"
-          helm push "openclaw-operator-${VERSION}.tgz" oci://ghcr.io/${{ steps.owner.outputs.name }}/charts
+          PUSH_OUT=$(helm push "openclaw-operator-${VERSION}.tgz" "oci://ghcr.io/${OWNER}/charts" 2>&1)
+          echo "${PUSH_OUT}"
+          DIGEST=$(echo "${PUSH_OUT}" | awk '/Digest:/ {print $2}')
+          if [ -z "${DIGEST}" ]; then echo "::error::could not parse chart digest"; exit 1; fi
+          cosign sign --yes "ghcr.io/${OWNER}/charts/openclaw-operator@${DIGEST}"
