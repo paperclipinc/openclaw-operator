@@ -74,4 +74,6 @@ annotations:
       image: ghcr.io/paperclipinc/openclaw-operator:v0.36.1 # x-release-please-version
   artifacthub.io/changes: |
     - kind: added
-      description: PVC backup-on-delete and restore-from-backup via rclone/S3
+      description: Helm chart OCI artifact is now cosign-signed (keyless)
+    - kind: fixed
+      description: artifacthub.io/images annotation now tracks the released operator image tag
