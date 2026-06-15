@@ -26,6 +26,10 @@
           "type": "yaml",
           "path": "charts/openclaw-operator/Chart.yaml",
           "jsonpath": "$.appVersion"
+        },
+        {
+          "type": "generic",
+          "path": "charts/openclaw-operator/Chart.yaml"
         }
       ]
     }
