@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.2](https://github.com/paperclipinc/openclaw-operator/compare/v0.36.1...v0.36.2) (2026-06-15)
+
+
+### Bug Fixes
+
+* **chart:** refresh changelog for signed-chart release (0.36.2) ([#545](https://github.com/paperclipinc/openclaw-operator/issues/545)) ([f99b35a](https://github.com/paperclipinc/openclaw-operator/commit/f99b35a42fcf57f4c91cb7c5f99f2ee636c53966))
+
 ## [0.36.1](https://github.com/paperclipinc/openclaw-operator/compare/v0.36.0...v0.36.1) (2026-06-08)
 
 
