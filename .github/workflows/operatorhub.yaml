@@ -78,11 +78,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Sync fork with upstream to avoid stale-branch CI failures
-          git fetch upstream main
-          git reset --hard upstream/main
+          FORK_OWNER=$(gh api user --jq '.login')
 
-          git checkout -b "${BRANCH}"
+          # Sync the fork's main with upstream SERVER-SIDE. gh repo sync performs a
+          # fast-forward via the GitHub API and is exempt from the PAT 'workflow'
+          # scope restriction. Previously we reset --hard to upstream/main and pushed
+          # the branch, which carried upstream's .github/workflows changes; a PAT
+          # without 'workflow' scope is refused that push (broke v0.36.1/v0.36.2).
+          gh repo sync "${FORK_OWNER}/community-operators" --branch main --force
+
+          # Branch from the now-synced fork main, so the bundle branch's push delta
+          # is ONLY the bundle commit (workflow-file commits are already on the fork
+          # via the server-side sync and are not re-introduced by the push).
+          git fetch origin main
+          git checkout -B "${BRANCH}" origin/main
 
           # Copy prepared bundle (mkdir for first-time submissions)
           mkdir -p operators/openclaw-operator
@@ -187,11 +196,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Sync fork with upstream to avoid stale-branch CI failures
-          git fetch upstream main
-          git reset --hard upstream/main
+          FORK_OWNER=$(gh api user --jq '.login')
 
-          git checkout -b "${BRANCH}"
+          # Sync the fork's main with upstream SERVER-SIDE. gh repo sync performs a
+          # fast-forward via the GitHub API and is exempt from the PAT 'workflow'
+          # scope restriction. Previously we reset --hard to upstream/main and pushed
+          # the branch, which carried upstream's .github/workflows changes; a PAT
+          # without 'workflow' scope is refused that push (broke v0.36.1/v0.36.2).
+          gh repo sync "${FORK_OWNER}/community-operators-prod" --branch main --force
+
+          # Branch from the now-synced fork main, so the bundle branch's push delta
+          # is ONLY the bundle commit (workflow-file commits are already on the fork
+          # via the server-side sync and are not re-introduced by the push).
+          git fetch origin main
+          git checkout -B "${BRANCH}" origin/main
 
           # Copy prepared bundle (mkdir for first-time submissions)
           mkdir -p operators/openclaw-operator
