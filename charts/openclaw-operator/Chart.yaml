@@ -52,6 +52,11 @@ annotations:
       name: openclawselfconfigs.openclaw.rocks
       displayName: OpenClaw Self-Config
       description: A request from an agent to modify its own OpenClawInstance spec
+    - kind: OpenClawClusterDefaults
+      version: v1alpha1
+      name: openclawclusterdefaults.openclaw.rocks
+      displayName: OpenClaw Cluster Defaults
+      description: Cluster-scoped defaults merged into every OpenClawInstance at reconcile time
   artifacthub.io/crdsExamples: |
     - apiVersion: openclaw.rocks/v1alpha1
       kind: OpenClawInstance
