@@ -1,3 +1,6 @@
+---
+# opm catalog upgrade graph: order bundles by semver (our CSVs have no explicit `replaces`).
+updateGraph: semver-mode
+# A PR authored by a listed reviewer auto-gets the `authorized-changes` label (enables auto-merge).
 reviewers:
   - stubbi
-updateGraph: semver-mode

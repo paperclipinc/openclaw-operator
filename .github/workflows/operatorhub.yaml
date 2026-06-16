@@ -96,8 +96,12 @@ jobs:
           # Copy prepared bundle (mkdir for first-time submissions)
           mkdir -p operators/openclaw-operator
           cp -r ../submission/operators/openclaw-operator/${VERSION} operators/openclaw-operator/${VERSION}
+          # Seed ci.yaml only when the catalog does not already have one. Overwriting
+          # it on every release is a privileged change that withholds the
+          # authorized-changes label and blocks auto-merge.
+          [ -f operators/openclaw-operator/ci.yaml ] || cp "${GITHUB_WORKSPACE}/bundle/ci.yaml" operators/openclaw-operator/ci.yaml
 
-          git add "operators/openclaw-operator/${VERSION}"
+          git add "operators/openclaw-operator/${VERSION}" operators/openclaw-operator/ci.yaml
           git commit -m "operator openclaw-operator (${VERSION})"
           git push --force origin "${BRANCH}"
 
@@ -214,8 +218,12 @@ jobs:
           # Copy prepared bundle (mkdir for first-time submissions)
           mkdir -p operators/openclaw-operator
           cp -r ../submission/operators/openclaw-operator/${VERSION} operators/openclaw-operator/${VERSION}
+          # Seed ci.yaml only when the catalog does not already have one. Overwriting
+          # it on every release is a privileged change that withholds the
+          # authorized-changes label and blocks auto-merge.
+          [ -f operators/openclaw-operator/ci.yaml ] || cp "${GITHUB_WORKSPACE}/bundle/ci.yaml" operators/openclaw-operator/ci.yaml
 
-          git add "operators/openclaw-operator/${VERSION}"
+          git add "operators/openclaw-operator/${VERSION}" operators/openclaw-operator/ci.yaml
           git commit -m "operator openclaw-operator (${VERSION})"
           git push --force origin "${BRANCH}"
 
