@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.4](https://github.com/paperclipinc/openclaw-operator/compare/v0.36.3...v0.36.4) (2026-06-16)
+
+
+### Bug Fixes
+
+* **operatorhub:** ship ci.yaml with updateGraph semver-mode ([#551](https://github.com/paperclipinc/openclaw-operator/issues/551)) ([ab5f444](https://github.com/paperclipinc/openclaw-operator/commit/ab5f444b646bb3a74f7b6cb66c5a85221e7e191e))
+
 ## [0.36.3](https://github.com/paperclipinc/openclaw-operator/compare/v0.36.2...v0.36.3) (2026-06-16)
 
 
