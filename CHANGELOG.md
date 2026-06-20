@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.5](https://github.com/paperclipinc/openclaw-operator/compare/v0.36.4...v0.36.5) (2026-06-20)
+
+
+### Bug Fixes
+
+* **controller:** treat optimistic-lock conflicts as retryable, not failed ([#553](https://github.com/paperclipinc/openclaw-operator/issues/553)) ([#554](https://github.com/paperclipinc/openclaw-operator/issues/554)) ([07a040b](https://github.com/paperclipinc/openclaw-operator/commit/07a040b42fd43e20ac088b7e5c44adedf9f654c3))
+
 ## [0.36.4](https://github.com/paperclipinc/openclaw-operator/compare/v0.36.3...v0.36.4) (2026-06-16)
 
 
