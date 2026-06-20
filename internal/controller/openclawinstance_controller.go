@@ -194,6 +194,18 @@ func (r *OpenClawInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return rqErr.Result, nil
 		}
 
+		// A Kubernetes optimistic-lock conflict ("object has been modified") is a
+		// benign, retryable controller-runtime race (commonly seen on resume when
+		// StatefulSet/status are updated from a slightly stale resourceVersion),
+		// not a workload failure. Requeue promptly without emitting a failed-looking
+		// status or a ReconcileFailed event; the next reconcile runs against a fresh
+		// resourceVersion and succeeds (issue #553).
+		if res, ok := retryableConflictResult(err); ok {
+			logger.V(1).Info("Reconcile hit an optimistic-lock conflict; requeueing without marking failed", "error", err.Error())
+			reconcileTotal.WithLabelValues(instance.Name, instance.Namespace, "conflict").Inc()
+			return res, nil
+		}
+
 		logger.Error(err, "Failed to reconcile resources")
 		r.Recorder.Event(instance, corev1.EventTypeWarning, "ReconcileFailed", err.Error())
 
