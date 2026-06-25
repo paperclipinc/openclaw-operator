@@ -1161,6 +1161,39 @@ type ProbesSpec struct {
 	// Startup probe configuration
 	// +optional
 	Startup *ProbeSpec `json:"startup,omitempty"`
+
+	// DiskReadiness configures an optional, opt-in defense-in-depth readiness
+	// guard for PVC-backed workspaces. When enabled, the readiness probe is
+	// rendered as an exec probe that also verifies the workspace volume is
+	// writable and has free space above a threshold, so a full or read-only
+	// PVC marks the pod NotReady (draining it from Service endpoints) instead
+	// of silently accepting traffic it cannot persist. Liveness and startup
+	// probes are unaffected, so a full PVC does not turn into a CrashLoopBackOff.
+	// The application-level /readyz endpoint remains the primary readiness
+	// signal; this guard is secondary. Defaults to disabled.
+	// +optional
+	DiskReadiness *DiskReadinessSpec `json:"diskReadiness,omitempty"`
+}
+
+// DiskReadinessSpec configures the optional disk-aware readiness guard for
+// PVC-backed OpenClaw workspaces.
+type DiskReadinessSpec struct {
+	// Enabled turns on the disk-aware readiness guard. Defaults to false, so
+	// existing deployments are unaffected unless they explicitly opt in.
+	// +kubebuilder:default=false
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Path is the workspace mount path checked for writability and free space.
+	// Defaults to the OpenClaw workspace data mount (/home/openclaw/.openclaw).
+	// +optional
+	Path string `json:"path,omitempty"`
+
+	// MinFree is the minimum free space the workspace volume must have for the
+	// pod to be considered Ready, expressed as a Kubernetes quantity
+	// (e.g. "100Mi", "1Gi"). Defaults to "64Mi".
+	// +optional
+	MinFree string `json:"minFree,omitempty"`
 }
 
 // ProbeSpec defines a health probe
