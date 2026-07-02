@@ -13168,3 +13168,102 @@ func TestBuildStatefulSet_NoPluginsNoNodePath(t *testing.T) {
 		}
 	}
 }
+
+// --- Disk-aware readiness guard (spec.probes.diskReadiness) ---
+
+func TestBuildStatefulSet_DiskReadiness_DefaultKeepsHTTPProbe(t *testing.T) {
+	// No diskReadiness configured: readiness stays an HTTP GET /readyz probe.
+	instance := newTestInstance("disk-readiness-default")
+	main := BuildStatefulSet(instance, "", nil, nil, nil).Spec.Template.Spec.Containers[0]
+
+	if main.ReadinessProbe == nil {
+		t.Fatal("readiness probe should not be nil")
+	}
+	if main.ReadinessProbe.HTTPGet == nil {
+		t.Fatal("readiness probe should be HTTP GET by default")
+	}
+	if main.ReadinessProbe.Exec != nil {
+		t.Error("readiness probe should not be an exec probe by default")
+	}
+	if got := main.ReadinessProbe.HTTPGet.Path; got != "/readyz" {
+		t.Errorf("readiness HTTP path = %q, want /readyz", got)
+	}
+}
+
+func TestBuildStatefulSet_DiskReadiness_DisabledKeepsHTTPProbe(t *testing.T) {
+	instance := newTestInstance("disk-readiness-disabled")
+	instance.Spec.Probes = &openclawv1alpha1.ProbesSpec{
+		DiskReadiness: &openclawv1alpha1.DiskReadinessSpec{Enabled: Ptr(false)},
+	}
+	main := BuildStatefulSet(instance, "", nil, nil, nil).Spec.Template.Spec.Containers[0]
+
+	if main.ReadinessProbe.HTTPGet == nil || main.ReadinessProbe.Exec != nil {
+		t.Error("readiness probe should remain HTTP when diskReadiness is disabled")
+	}
+}
+
+func TestBuildStatefulSet_DiskReadiness_EnabledRendersExec(t *testing.T) {
+	instance := newTestInstance("disk-readiness-on")
+	instance.Spec.Probes = &openclawv1alpha1.ProbesSpec{
+		DiskReadiness: &openclawv1alpha1.DiskReadinessSpec{Enabled: Ptr(true)},
+	}
+	main := BuildStatefulSet(instance, "", nil, nil, nil).Spec.Template.Spec.Containers[0]
+
+	rp := main.ReadinessProbe
+	if rp == nil || rp.Exec == nil {
+		t.Fatal("readiness probe should be an exec probe when diskReadiness is enabled")
+	}
+	if rp.HTTPGet != nil {
+		t.Error("readiness probe should not retain an HTTP handler when exec is used")
+	}
+	if len(rp.Exec.Command) != 3 || rp.Exec.Command[0] != "sh" || rp.Exec.Command[1] != "-c" {
+		t.Fatalf("exec command = %v, want [sh -c <script>]", rp.Exec.Command)
+	}
+	script := rp.Exec.Command[2]
+	for _, want := range []string{
+		WorkspaceDataMountPath, // default workspace path
+		"67108864",             // default 64Mi threshold in bytes
+		"/readyz",              // gateway readiness still checked
+		"df -Pk",               // free-space check
+		"-w \"$p\"",            // writability check
+		// exec probe targets the same loopback port the HTTP probe would use
+		fmt.Sprintf("127.0.0.1:%d/readyz", probeTargetPort(instance)),
+	} {
+		if !strings.Contains(script, want) {
+			t.Errorf("exec script missing %q\nscript:\n%s", want, script)
+		}
+	}
+
+	// Timing fields preserved.
+	if rp.InitialDelaySeconds != 5 || rp.PeriodSeconds != 5 || rp.FailureThreshold != 3 {
+		t.Errorf("readiness timing changed: %+v", rp)
+	}
+
+	// Liveness/startup remain HTTP /healthz so a full PVC does not CrashLoop.
+	if main.LivenessProbe == nil || main.LivenessProbe.HTTPGet == nil || main.LivenessProbe.HTTPGet.Path != "/healthz" {
+		t.Error("liveness probe should remain HTTP GET /healthz")
+	}
+	if main.StartupProbe == nil || main.StartupProbe.HTTPGet == nil || main.StartupProbe.HTTPGet.Path != "/healthz" {
+		t.Error("startup probe should remain HTTP GET /healthz")
+	}
+}
+
+func TestBuildStatefulSet_DiskReadiness_CustomPathAndThreshold(t *testing.T) {
+	instance := newTestInstance("disk-readiness-custom")
+	instance.Spec.Probes = &openclawv1alpha1.ProbesSpec{
+		DiskReadiness: &openclawv1alpha1.DiskReadinessSpec{
+			Enabled: Ptr(true),
+			Path:    "/data/workspace",
+			MinFree: "1Gi",
+		},
+	}
+	main := BuildStatefulSet(instance, "", nil, nil, nil).Spec.Template.Spec.Containers[0]
+
+	script := main.ReadinessProbe.Exec.Command[2]
+	if !strings.Contains(script, "'/data/workspace'") {
+		t.Errorf("exec script should check custom path, got:\n%s", script)
+	}
+	if !strings.Contains(script, "1073741824") { // 1Gi in bytes
+		t.Errorf("exec script should use 1Gi threshold in bytes, got:\n%s", script)
+	}
+}
