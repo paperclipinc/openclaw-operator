@@ -5754,9 +5754,11 @@ func TestNormalizeClawHubSlug(t *testing.T) {
 		want  string
 	}{
 		{"bare slug", "mcp-server-fetch", "mcp-server-fetch"},
-		{"@owner/slug", "@anthropic/mcp-server-fetch", "mcp-server-fetch"},
-		{"@slug (no owner)", "@mcp-server-fetch", "mcp-server-fetch"},
-		{"nested path", "@org/sub/skill-name", "skill-name"},
+		{"@owner/slug preserved", "@anthropic/mcp-server-fetch", "@anthropic/mcp-server-fetch"},
+		{"owner/slug gains @", "anthropic/mcp-server-fetch", "@anthropic/mcp-server-fetch"},
+		{"ambiguous @owner/slug preserved", "@ivangdavila/excel-xlsx", "@ivangdavila/excel-xlsx"},
+		{"@slug (no owner) trimmed to bare", "@mcp-server-fetch", "mcp-server-fetch"},
+		{"nested path preserved", "@org/sub/skill-name", "@org/sub/skill-name"},
 		{"npm: passthrough", "npm:@openclaw/matrix", "npm:@openclaw/matrix"},
 		{"pack: passthrough", "pack:paperclipinc/skills/image-gen", "pack:paperclipinc/skills/image-gen"},
 	}
@@ -5770,8 +5772,28 @@ func TestNormalizeClawHubSlug(t *testing.T) {
 }
 
 func TestParseSkillEntry_ClawHub(t *testing.T) {
+	// Owner-qualified refs must be passed through verbatim so ClawHub can
+	// disambiguate slugs shared across owners (#558).
 	got := parseSkillEntry("@anthropic/mcp-server-fetch")
-	want := "_install_skill 'mcp-server-fetch'"
+	want := "_install_skill '@anthropic/mcp-server-fetch'"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestParseSkillEntry_ClawHub_AmbiguousOwnerQualified(t *testing.T) {
+	// Regression for #558: ambiguous slugs must keep the @owner/ prefix.
+	got := parseSkillEntry("@ivangdavila/excel-xlsx")
+	want := "_install_skill '@ivangdavila/excel-xlsx'"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestParseSkillEntry_ClawHub_OwnerQualifiedNoAt(t *testing.T) {
+	// Defensive: "owner/slug" without a leading @ is normalized to "@owner/slug".
+	got := parseSkillEntry("ivangdavila/excel-xlsx")
+	want := "_install_skill '@ivangdavila/excel-xlsx'"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -5824,11 +5846,30 @@ func TestBuildSkillsScript_WithSkills(t *testing.T) {
 	if !strings.Contains(script, skillInstallWrapper) {
 		t.Error("script should contain the _install_skill wrapper")
 	}
-	if !strings.Contains(script, "_install_skill 'mcp-server-fetch'") {
-		t.Error("script should contain _install_skill for mcp-server-fetch (normalized from @anthropic/mcp-server-fetch)")
+	if !strings.Contains(script, "_install_skill '@anthropic/mcp-server-fetch'") {
+		t.Error("script should contain _install_skill with the owner-qualified @anthropic/mcp-server-fetch preserved")
 	}
-	if !strings.Contains(script, "_install_skill 'copilot-skill'") {
-		t.Error("script should contain _install_skill for copilot-skill (normalized from @github/copilot-skill)")
+	if !strings.Contains(script, "_install_skill '@github/copilot-skill'") {
+		t.Error("script should contain _install_skill with the owner-qualified @github/copilot-skill preserved")
+	}
+}
+
+func TestBuildSkillsScript_OwnerQualifiedAndBare(t *testing.T) {
+	// #558: owner-qualified refs preserved verbatim, bare slugs stay bare, in one list.
+	instance := newTestInstance("mixed-owner-bare")
+	instance.Spec.Skills = []string{"@ivangdavila/excel-xlsx", "pandas"}
+
+	script := BuildSkillsScript(instance)
+
+	if !strings.Contains(script, "_install_skill '@ivangdavila/excel-xlsx'") {
+		t.Error("script should preserve the owner-qualified @ivangdavila/excel-xlsx ref")
+	}
+	if !strings.Contains(script, "_install_skill 'pandas'") {
+		t.Error("script should keep the bare pandas slug bare")
+	}
+	// The bare slug must not accidentally acquire an @ prefix.
+	if strings.Contains(script, "_install_skill '@pandas'") {
+		t.Error("bare slug pandas must not be rewritten to @pandas")
 	}
 }
 
@@ -5851,8 +5892,8 @@ func TestBuildSkillsScript_MixedPrefixes(t *testing.T) {
 	if !strings.Contains(script, skillInstallWrapper) {
 		t.Error("script should contain the _install_skill wrapper (has clawhub skills)")
 	}
-	if !strings.Contains(script, "_install_skill 'mcp-server-fetch'") {
-		t.Error("script should contain _install_skill for clawhub skill (normalized)")
+	if !strings.Contains(script, "_install_skill '@anthropic/mcp-server-fetch'") {
+		t.Error("script should contain _install_skill with the owner-qualified clawhub ref preserved")
 	}
 	if !strings.Contains(script, "npm install -g '@openclaw/matrix'") {
 		t.Error("script should contain npm install -g for @openclaw/matrix")
@@ -5912,7 +5953,7 @@ func TestBuildSkillsScript_WrapperOrdering(t *testing.T) {
 	setEIdx := strings.Index(script, "set -e")
 	setupIdx := strings.Index(script, "mkdir -p /home/openclaw/.openclaw/skills")
 	wrapperIdx := strings.Index(script, "_install_skill()")
-	installIdx := strings.Index(script, "_install_skill 'mcp-server-fetch'")
+	installIdx := strings.Index(script, "_install_skill '@anthropic/mcp-server-fetch'")
 
 	if setEIdx == -1 || setupIdx == -1 || wrapperIdx == -1 || installIdx == -1 {
 		t.Fatalf("missing expected content in script:\n%s", script)

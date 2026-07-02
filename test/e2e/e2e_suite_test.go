@@ -2011,8 +2011,8 @@ var _ = Describe("OpenClawInstance Controller", func() {
 			Expect(script).To(ContainSubstring("npm install -g '@openclaw/matrix'"),
 				"npm: prefixed skill should use global npm install")
 			// Script should also contain clawhub for non-prefixed skill
-			Expect(script).To(ContainSubstring("_install_skill 'mcp-server-fetch'"),
-				"non-prefixed skill should use _install_skill wrapper with normalized slug")
+			Expect(script).To(ContainSubstring("_install_skill '@anthropic/mcp-server-fetch'"),
+				"non-prefixed skill should use _install_skill wrapper with the owner-qualified ref preserved (#558)")
 			// Script should redirect /app/skills to PVC (#313)
 			Expect(script).To(ContainSubstring("mkdir -p /home/openclaw/.openclaw/skills"),
 				"script should create PVC-backed skills directory")
