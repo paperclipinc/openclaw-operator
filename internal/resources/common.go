@@ -44,7 +44,7 @@ const (
 	CanvasProxyPort = 18794
 
 	// DefaultGatewayProxyImage is the default image for the gateway proxy sidecar
-	DefaultGatewayProxyImage = "nginx:1.27-alpine"
+	DefaultGatewayProxyImage = "docker.io/library/nginx:1.27-alpine"
 
 	// NginxConfigKey is the ConfigMap data key for the nginx stream config
 	NginxConfigKey = "nginx.conf"
@@ -61,7 +61,7 @@ const (
 	// Previous versions used ghcr.io/browserless/chromium, but browserless's
 	// session management (launch Chrome per connection, kill on disconnect)
 	// is incompatible with Playwright's connectOverCDP -- see #360.
-	DefaultChromiumImage = "chromedp/headless-shell"
+	DefaultChromiumImage = "docker.io/chromedp/headless-shell"
 
 	// DeprecatedChromiumImage is the old browserless image used before v0.22.1.
 	// Instances created with older CRDs have this value stored via kubebuilder
@@ -171,7 +171,7 @@ const (
 	// DefaultOTelCollectorImage is the default image for the OTel Collector sidecar.
 	// The core distribution is lightweight (~80MB) and includes the OTLP receiver
 	// and Prometheus exporter needed for the metrics pipeline.
-	DefaultOTelCollectorImage = "otel/opentelemetry-collector"
+	DefaultOTelCollectorImage = "docker.io/otel/opentelemetry-collector"
 
 	// DefaultOTelCollectorTag is the default tag for the OTel Collector image
 	DefaultOTelCollectorTag = "0.120.0"

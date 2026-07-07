@@ -574,7 +574,7 @@ func buildInitContainers(instance *openclawv1alpha1.OpenClawInstance, externalWo
 		// overwrite mode uses busybox (lightweight, only needs cp).
 		// Note: ghcr.io/jqlang/jq and ghcr.io/astral-sh/uv base tags are
 		// distroless (no shell), so we cannot use them with "sh -c".
-		initImage := ApplyRegistryOverride("busybox:1.37", instance.Spec.Registry)
+		initImage := ApplyRegistryOverride("docker.io/library/busybox:1.37", instance.Spec.Registry)
 		if instance.Spec.Config.MergeMode == ConfigMergeModeMerge || instance.Spec.Config.Format == ConfigFormatJSON5 {
 			initImage = GetImage(instance)
 		}
@@ -1826,7 +1826,7 @@ func buildChromiumContainer(instance *openclawv1alpha1.OpenClawInstance) corev1.
 func buildOllamaContainer(instance *openclawv1alpha1.OpenClawInstance) corev1.Container {
 	repo := instance.Spec.Ollama.Image.Repository
 	if repo == "" {
-		repo = "ollama/ollama"
+		repo = "docker.io/ollama/ollama"
 	}
 
 	tag := instance.Spec.Ollama.Image.Tag
@@ -1838,6 +1838,7 @@ func buildOllamaContainer(instance *openclawv1alpha1.OpenClawInstance) corev1.Co
 	if instance.Spec.Ollama.Image.Digest != "" {
 		image = repo + "@" + instance.Spec.Ollama.Image.Digest
 	}
+
 	image = ApplyRegistryOverride(image, instance.Spec.Registry)
 
 	container := corev1.Container{
@@ -2093,7 +2094,7 @@ func buildOllamaModelPullInitContainer(instance *openclawv1alpha1.OpenClawInstan
 
 	repo := instance.Spec.Ollama.Image.Repository
 	if repo == "" {
-		repo = "ollama/ollama"
+		repo = "docker.io/ollama/ollama"
 	}
 	tag := instance.Spec.Ollama.Image.Tag
 	if tag == "" {
