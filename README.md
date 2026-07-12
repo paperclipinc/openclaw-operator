@@ -555,6 +555,8 @@ Raw mode does not inject config entries into `config.raw.skills.entries` -- use 
 
 The operator resolves packs via the GitHub Contents + Git Trees APIs (cached for 5 minutes), seeds files into the workspace via the init container, and (in manifest mode) injects config entries into `config.raw.skills.entries` with user overrides taking precedence. Set `GITHUB_TOKEN` on the operator deployment for private repo access.
 
+**Updating pack contents.** By default (`spec.skillPackUpdatePolicy: Replace`), pack-seeded files converge to the declared pack revision on every pod start: changing a pinned `@tag`/`@commit` (or pushing to a tracked branch) overwrites the seeded files, and files that are no longer part of any declared pack are removed. The operator tracks what it seeded in a manifest at `/data/.skillpack-manifest` on the data volume, so user-created workspace files are never touched. Files at pack-declared paths are operator-managed -- local edits to them are reverted on restart. Set `spec.skillPackUpdatePolicy: CreateOnly` to opt out and keep the legacy seed-once behavior (files are never overwritten or removed after first seeding; updating a pinned revision then has no effect on already-seeded files).
+
 ### Plugin installation
 
 Install plugins declaratively. The operator runs a dedicated init container that installs each plugin into `~/.openclaw/extensions/<name>/` before the agent starts, where `<name>` is the unscoped npm package basename (so `@openclaw/brave-plugin` becomes `~/.openclaw/extensions/brave-plugin/`):

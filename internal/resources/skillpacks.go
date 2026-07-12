@@ -23,6 +23,21 @@ import (
 const (
 	// SkillPackPrefix is the prefix for skill pack entries in the skills list.
 	SkillPackPrefix = "pack:"
+
+	// SkillPackUpdatePolicyReplace converges seeded pack files to the declared
+	// pack revision on every pod start (overwrite changed files, remove files
+	// no longer declared). This is the default.
+	SkillPackUpdatePolicyReplace = "Replace"
+
+	// SkillPackUpdatePolicyCreateOnly seeds pack files only when absent and
+	// never overwrites or removes them (legacy behavior, see #564).
+	SkillPackUpdatePolicyCreateOnly = "CreateOnly"
+
+	// SkillPackManifestPath is where the init script records the set of
+	// pack-seeded workspace paths on the data volume. It lives outside
+	// /data/workspace so it is not visible to the agent, and on the data
+	// volume because the init container rootfs is read-only.
+	SkillPackManifestPath = "/data/.skillpack-manifest"
 )
 
 // ResolvedSkillPacks contains resolved workspace files, directories, and config for skill packs.
