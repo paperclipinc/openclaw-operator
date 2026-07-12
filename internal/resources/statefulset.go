@@ -954,19 +954,30 @@ const skillInstallWrapper = `_install_skill() {
   fi
 }`
 
-// normalizeClawHubSlug strips the @owner/ prefix from ClawHub skill identifiers.
-// ClawHub CLI expects bare skill names (e.g. "mcp-server-fetch"), but users and
-// documentation sometimes use "@owner/skill-name" format from the ClawHub website URL.
+// normalizeClawHubSlug normalizes a ClawHub skill identifier into the form that
+// `clawhub install` expects.
+//
+// Owner-qualified refs must be passed through verbatim as "@owner/slug" so that
+// ClawHub can disambiguate slugs that exist under multiple owners (#558); passing
+// only the bare slug makes ambiguous installs fail and leaves the pod stuck in
+// Init:CrashLoopBackOff. A defensive "owner/slug" without the leading "@" is
+// normalized to "@owner/slug" as well. Bare slugs (e.g. "mcp-server-fetch") are
+// passed through unchanged, and a stray leading "@" on a bare slug (no owner, no
+// "/") is trimmed so it stays a bare slug (#288). npm: and pack: prefixes are not
+// ClawHub slugs and are returned as-is.
 func normalizeClawHubSlug(entry string) string {
 	// npm: and pack: prefixes are not ClawHub slugs
 	if strings.HasPrefix(entry, "npm:") || strings.HasPrefix(entry, "pack:") {
 		return entry
 	}
-	slug := strings.TrimPrefix(entry, "@")
-	if i := strings.LastIndex(slug, "/"); i >= 0 {
-		slug = slug[i+1:]
+	// Owner-qualified refs contain a "/". Preserve them verbatim so ClawHub can
+	// disambiguate slugs shared across owners, ensuring the leading "@" is
+	// present (so a defensive "owner/slug" becomes "@owner/slug").
+	if strings.Contains(entry, "/") {
+		return "@" + strings.TrimPrefix(entry, "@")
 	}
-	return slug
+	// Bare slug: drop a stray leading "@" since there is no owner to qualify.
+	return strings.TrimPrefix(entry, "@")
 }
 
 // parseSkillEntry returns the shell command to install a single skill entry.
