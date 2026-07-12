@@ -40,6 +40,26 @@ type OpenClawInstanceSpec struct {
 	// +optional
 	Skills []string `json:"skills,omitempty"`
 
+	// SkillPackUpdatePolicy controls how workspace files seeded from "pack:"
+	// skill entries are reconciled on pod start.
+	//
+	// "Replace" (default) converges seeded pack files to the declared pack
+	// revision on every pod start: changed files are overwritten and files that
+	// were seeded by a previous revision but are no longer part of any declared
+	// pack are removed. The operator tracks the seeded file set in a manifest
+	// at /data/.skillpack-manifest on the data volume.
+	//
+	// "CreateOnly" preserves the legacy behavior: pack files are only copied
+	// when absent and never overwritten or removed, so updating a pinned pack
+	// revision does not refresh already-seeded contents (see #564).
+	//
+	// Only files at paths declared by pack: entries are affected; files from
+	// spec.workspace.initialFiles are always seeded create-only.
+	// +kubebuilder:validation:Enum=Replace;CreateOnly
+	// +kubebuilder:default=Replace
+	// +optional
+	SkillPackUpdatePolicy string `json:"skillPackUpdatePolicy,omitempty"`
+
 	// Plugins is a list of plugins to install via init container.
 	// Each entry is an npm package name (e.g., "@openclaw/matrix" or
 	// "@martian-engineering/lossless-claw"). An optional "npm:" prefix is

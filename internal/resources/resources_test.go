@@ -4941,8 +4941,11 @@ func TestShellQuote(t *testing.T) {
 	}
 }
 
-// operatorSeedLines is the init script suffix that seeds operator-injected workspace files (always present).
-const operatorSeedLines = "mkdir -p /data/workspace\n[ -f /data/workspace/'BOOTSTRAP.md' ] || cp /workspace-init/'BOOTSTRAP.md' /data/workspace/'BOOTSTRAP.md'\n[ -f /data/workspace/'ENVIRONMENT.md' ] || cp /workspace-init/'ENVIRONMENT.md' /data/workspace/'ENVIRONMENT.md'"
+// operatorSeedLines is the init script suffix that seeds operator-injected
+// workspace files (always present). In the default Replace skill pack policy
+// it is followed by the no-pack sync block, which cleans up files seeded by a
+// previously declared pack revision (#564).
+var operatorSeedLines = "mkdir -p /data/workspace\n[ -f /data/workspace/'BOOTSTRAP.md' ] || cp /workspace-init/'BOOTSTRAP.md' /data/workspace/'BOOTSTRAP.md'\n[ -f /data/workspace/'ENVIRONMENT.md' ] || cp /workspace-init/'ENVIRONMENT.md' /data/workspace/'ENVIRONMENT.md'\n" + strings.Join(buildSkillPackSyncLines(nil), "\n")
 
 func TestBuildInitScript_ConfigOnly(t *testing.T) {
 	instance := newTestInstance("init-config-only")
@@ -4967,7 +4970,7 @@ func TestBuildInitScript_WorkspaceOnly(t *testing.T) {
 	}
 
 	script := BuildInitScript(instance, nil, nil, nil)
-	expected := "cp /config/'openclaw.json' /data/openclaw.json\nmkdir -p /data/workspace/'memory'\nmkdir -p /data/workspace\n[ -f /data/workspace/'BOOTSTRAP.md' ] || cp /workspace-init/'BOOTSTRAP.md' /data/workspace/'BOOTSTRAP.md'\n[ -f /data/workspace/'ENVIRONMENT.md' ] || cp /workspace-init/'ENVIRONMENT.md' /data/workspace/'ENVIRONMENT.md'\n[ -f /data/workspace/'SOUL.md' ] || cp /workspace-init/'SOUL.md' /data/workspace/'SOUL.md'"
+	expected := "cp /config/'openclaw.json' /data/openclaw.json\nmkdir -p /data/workspace/'memory'\nmkdir -p /data/workspace\n[ -f /data/workspace/'BOOTSTRAP.md' ] || cp /workspace-init/'BOOTSTRAP.md' /data/workspace/'BOOTSTRAP.md'\n[ -f /data/workspace/'ENVIRONMENT.md' ] || cp /workspace-init/'ENVIRONMENT.md' /data/workspace/'ENVIRONMENT.md'\n[ -f /data/workspace/'SOUL.md' ] || cp /workspace-init/'SOUL.md' /data/workspace/'SOUL.md'\n" + strings.Join(buildSkillPackSyncLines(nil), "\n")
 	if script != expected {
 		t.Errorf("unexpected script:\ngot:  %q\nwant: %q", script, expected)
 	}
@@ -5016,6 +5019,14 @@ func TestBuildInitScript_Both(t *testing.T) {
 	}
 
 	script := BuildInitScript(instance, nil, nil, nil)
+
+	// The default Replace policy appends the no-pack sync block; strip it so
+	// the exact line assertions below stay focused on seeding.
+	syncSuffix := "\n" + strings.Join(buildSkillPackSyncLines(nil), "\n")
+	if !strings.HasSuffix(script, syncSuffix) {
+		t.Fatalf("expected script to end with the no-pack sync block, got:\n%s", script)
+	}
+	script = strings.TrimSuffix(script, syncSuffix)
 
 	// Verify all expected lines are present (sorted order, operator files included)
 	lines := strings.Split(script, "\n")
@@ -5070,7 +5081,7 @@ func TestBuildInitScript_ShellQuotesSpecialChars(t *testing.T) {
 	}
 
 	script := BuildInitScript(instance, nil, nil, nil)
-	expected := "cp /config/'openclaw.json' /data/openclaw.json\nmkdir -p /data/workspace\n[ -f /data/workspace/'BOOTSTRAP.md' ] || cp /workspace-init/'BOOTSTRAP.md' /data/workspace/'BOOTSTRAP.md'\n[ -f /data/workspace/'ENVIRONMENT.md' ] || cp /workspace-init/'ENVIRONMENT.md' /data/workspace/'ENVIRONMENT.md'\n[ -f /data/workspace/'it'\\''s a file.md' ] || cp /workspace-init/'it'\\''s a file.md' /data/workspace/'it'\\''s a file.md'"
+	expected := "cp /config/'openclaw.json' /data/openclaw.json\nmkdir -p /data/workspace\n[ -f /data/workspace/'BOOTSTRAP.md' ] || cp /workspace-init/'BOOTSTRAP.md' /data/workspace/'BOOTSTRAP.md'\n[ -f /data/workspace/'ENVIRONMENT.md' ] || cp /workspace-init/'ENVIRONMENT.md' /data/workspace/'ENVIRONMENT.md'\n[ -f /data/workspace/'it'\\''s a file.md' ] || cp /workspace-init/'it'\\''s a file.md' /data/workspace/'it'\\''s a file.md'\n" + strings.Join(buildSkillPackSyncLines(nil), "\n")
 	if script != expected {
 		t.Errorf("unexpected script:\ngot:  %q\nwant: %q", script, expected)
 	}

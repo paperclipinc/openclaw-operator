@@ -837,18 +837,21 @@ func BuildInitScript(instance *openclawv1alpha1.OpenClawInstance, externalWorksp
 					shellQuote(wsPath), shellQuote(cmKey), shellQuote(wsPath)))
 		}
 
-		// Skill pack files use mapped paths (ConfigMap key differs from workspace path)
-		if HasSkillPackFiles(skillPacks) {
-			mappedKeys := make([]string, 0, len(skillPacks.PathMapping))
-			for cmKey := range skillPacks.PathMapping {
-				mappedKeys = append(mappedKeys, cmKey)
+		// Skill pack files use mapped paths (ConfigMap key differs from workspace path).
+		// Replace mode (default) converges seeded files to the declared pack
+		// revision: overwrite on every start and remove files seeded by a previous
+		// revision that are no longer declared, tracked via a manifest on the data
+		// volume (#564). CreateOnly preserves the legacy seed-if-absent behavior.
+		if instance.Spec.SkillPackUpdatePolicy == SkillPackUpdatePolicyCreateOnly {
+			if HasSkillPackFiles(skillPacks) {
+				for _, cmKey := range sortedPackKeys(skillPacks) {
+					wsPath := skillPacks.PathMapping[cmKey]
+					lines = append(lines, fmt.Sprintf("[ -f /data/workspace/%s ] || cp /workspace-init/%s /data/workspace/%s",
+						shellQuote(wsPath), shellQuote(cmKey), shellQuote(wsPath)))
+				}
 			}
-			sort.Strings(mappedKeys)
-			for _, cmKey := range mappedKeys {
-				wsPath := skillPacks.PathMapping[cmKey]
-				lines = append(lines, fmt.Sprintf("[ -f /data/workspace/%s ] || cp /workspace-init/%s /data/workspace/%s",
-					shellQuote(wsPath), shellQuote(cmKey), shellQuote(wsPath)))
-			}
+		} else {
+			lines = append(lines, buildSkillPackSyncLines(skillPacks)...)
 		}
 	}
 
@@ -929,6 +932,90 @@ func BuildInitScript(instance *openclawv1alpha1.OpenClawInstance, externalWorksp
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// sortedPackKeys returns the ConfigMap keys of the resolved skill pack files
+// in sorted order for deterministic script output.
+func sortedPackKeys(skillPacks *ResolvedSkillPacks) []string {
+	keys := make([]string, 0, len(skillPacks.PathMapping))
+	for cmKey := range skillPacks.PathMapping {
+		keys = append(keys, cmKey)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// skillPackCleanupLoop removes previously seeded pack files that are not in
+// the desired staging manifest, pruning directories that become empty. Entries
+// that are absolute or contain ".." are skipped so a corrupted manifest can
+// never delete anything outside /data/workspace. Callers must guard it with a
+// check that /data/.skillpack-manifest exists.
+const skillPackCleanupLoop = `while IFS= read -r f; do
+[ -n "$f" ] || continue
+case "$f" in /*|*..*) continue ;; esac
+if ! grep -Fxq -- "$f" /data/.skillpack-manifest.new; then
+rm -f "/data/workspace/$f"
+d=$(dirname -- "$f")
+while [ "$d" != "." ] && [ "$d" != "/" ]; do
+rmdir "/data/workspace/$d" 2>/dev/null || break
+d=$(dirname -- "$d")
+done
+fi
+done < /data/.skillpack-manifest`
+
+// buildSkillPackSyncLines emits the Replace-mode skill pack sync (#564):
+//  1. Write the desired set of pack-seeded workspace paths to a staging
+//     manifest on the data volume (the init container rootfs is read-only and
+//     /tmp is not mounted in overwrite mode, so /data is the only writable spot).
+//  2. Delete files recorded in the previous manifest that are no longer desired.
+//  3. Copy every pack file unconditionally so contents converge to the declared
+//     pack revision.
+//  4. Promote the staging manifest.
+//
+// With no pack files, the sync only runs cleanup when a manifest from a
+// previous revision exists, so instances that never used packs get a no-op.
+func buildSkillPackSyncLines(skillPacks *ResolvedSkillPacks) []string {
+	var lines []string
+
+	if !HasSkillPackFiles(skillPacks) {
+		// All packs were removed (or none declared). Clean up anything a
+		// previous revision seeded, then drop the manifest. No-op unless a
+		// manifest from a previous revision exists.
+		lines = append(lines,
+			"if [ -f /data/.skillpack-manifest ]; then",
+			": > /data/.skillpack-manifest.new",
+			skillPackCleanupLoop,
+			"rm -f /data/.skillpack-manifest.new /data/.skillpack-manifest",
+			"fi")
+		return lines
+	}
+
+	mappedKeys := sortedPackKeys(skillPacks)
+
+	// Desired manifest: one workspace-relative path per line.
+	quoted := make([]string, 0, len(mappedKeys))
+	for _, cmKey := range mappedKeys {
+		quoted = append(quoted, shellQuote(skillPacks.PathMapping[cmKey]))
+	}
+	lines = append(lines,
+		fmt.Sprintf("printf '%%s\\n' %s > /data/.skillpack-manifest.new", strings.Join(quoted, " ")),
+		"if [ -f /data/.skillpack-manifest ]; then",
+		skillPackCleanupLoop,
+		"fi")
+
+	// Unconditional copy so file contents follow the declared revision.
+	for _, cmKey := range mappedKeys {
+		wsPath := skillPacks.PathMapping[cmKey]
+		if dir := path.Dir(wsPath); dir != "." && dir != "/" {
+			lines = append(lines, fmt.Sprintf("mkdir -p /data/workspace/%s", shellQuote(dir)))
+		}
+		lines = append(lines, fmt.Sprintf("cp /workspace-init/%s /data/workspace/%s",
+			shellQuote(cmKey), shellQuote(wsPath)))
+	}
+
+	// Promote the manifest only after the seed completed.
+	lines = append(lines, "mv /data/.skillpack-manifest.new /data/.skillpack-manifest")
+	return lines
 }
 
 // clawHubSkillsSetup prepares a PVC-backed skills directory in the init
