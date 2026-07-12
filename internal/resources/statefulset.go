@@ -1041,19 +1041,30 @@ const skillInstallWrapper = `_install_skill() {
   fi
 }`
 
-// normalizeClawHubSlug strips the @owner/ prefix from ClawHub skill identifiers.
-// ClawHub CLI expects bare skill names (e.g. "mcp-server-fetch"), but users and
-// documentation sometimes use "@owner/skill-name" format from the ClawHub website URL.
+// normalizeClawHubSlug normalizes a ClawHub skill identifier into the form that
+// `clawhub install` expects.
+//
+// Owner-qualified refs must be passed through verbatim as "@owner/slug" so that
+// ClawHub can disambiguate slugs that exist under multiple owners (#558); passing
+// only the bare slug makes ambiguous installs fail and leaves the pod stuck in
+// Init:CrashLoopBackOff. A defensive "owner/slug" without the leading "@" is
+// normalized to "@owner/slug" as well. Bare slugs (e.g. "mcp-server-fetch") are
+// passed through unchanged, and a stray leading "@" on a bare slug (no owner, no
+// "/") is trimmed so it stays a bare slug (#288). npm: and pack: prefixes are not
+// ClawHub slugs and are returned as-is.
 func normalizeClawHubSlug(entry string) string {
 	// npm: and pack: prefixes are not ClawHub slugs
 	if strings.HasPrefix(entry, "npm:") || strings.HasPrefix(entry, "pack:") {
 		return entry
 	}
-	slug := strings.TrimPrefix(entry, "@")
-	if i := strings.LastIndex(slug, "/"); i >= 0 {
-		slug = slug[i+1:]
+	// Owner-qualified refs contain a "/". Preserve them verbatim so ClawHub can
+	// disambiguate slugs shared across owners, ensuring the leading "@" is
+	// present (so a defensive "owner/slug" becomes "@owner/slug").
+	if strings.Contains(entry, "/") {
+		return "@" + strings.TrimPrefix(entry, "@")
 	}
-	return slug
+	// Bare slug: drop a stray leading "@" since there is no owner to qualify.
+	return strings.TrimPrefix(entry, "@")
 }
 
 // parseSkillEntry returns the shell command to install a single skill entry.
@@ -2552,17 +2563,60 @@ func buildChromiumResourceRequirements(instance *openclawv1alpha1.OpenClawInstan
 // proxy sidecar is enabled, probes target the proxy port (18790) which
 // forwards to the gateway on loopback. When disabled, probes hit the
 // gateway directly on port 18789.
-func buildHTTPProbeHandler(path string, instance *openclawv1alpha1.OpenClawInstance) corev1.ProbeHandler {
-	port := int32(GatewayPort)
-	if IsGatewayProxyEnabled(instance) {
-		port = GatewayProxyPort
-	}
+func buildHTTPProbeHandler(probePath string, instance *openclawv1alpha1.OpenClawInstance) corev1.ProbeHandler {
 	return corev1.ProbeHandler{
 		HTTPGet: &corev1.HTTPGetAction{
-			Path:   path,
-			Port:   intstr.FromInt32(port),
+			Path:   probePath,
+			Port:   intstr.FromInt32(probeTargetPort(instance)),
 			Scheme: corev1.URISchemeHTTP,
 		},
+	}
+}
+
+// probeTargetPort returns the loopback port that readiness checks should hit.
+// When the gateway proxy sidecar is enabled, traffic goes through the proxy
+// port; otherwise it hits the gateway directly.
+func probeTargetPort(instance *openclawv1alpha1.OpenClawInstance) int32 {
+	if IsGatewayProxyEnabled(instance) {
+		return GatewayProxyPort
+	}
+	return int32(GatewayPort)
+}
+
+// buildDiskReadinessHandler renders the exec handler for the optional
+// disk-aware readiness guard. The script first verifies the workspace mount is
+// writable and has free space above the configured threshold, then defers to
+// the gateway /readyz endpoint as the primary readiness signal. The HTTP check
+// gracefully degrades (is skipped) only if neither curl nor wget is present in
+// the image, so a missing HTTP client never makes a healthy pod permanently
+// NotReady. A full or read-only PVC always fails the probe.
+func buildDiskReadinessHandler(spec *openclawv1alpha1.DiskReadinessSpec, instance *openclawv1alpha1.OpenClawInstance) corev1.ProbeHandler {
+	mountPath := spec.Path
+	if mountPath == "" {
+		mountPath = WorkspaceDataMountPath
+	}
+	minFree := ParseQuantity(spec.MinFree, DefaultDiskReadinessMinFree)
+	minFreeBytes := minFree.Value()
+	port := probeTargetPort(instance)
+
+	// POSIX sh: df -Pk reports 1K blocks; multiply the available column by 1024
+	// to get bytes. Quoting keeps paths with spaces safe. set -e propagates the
+	// first failing check as a non-zero exit (=> NotReady).
+	script := fmt.Sprintf(`set -e
+p='%s'
+[ -w "$p" ] || exit 1
+avail=$(df -Pk "$p" 2>/dev/null | awk 'NR==2 {print $4 * 1024}')
+[ -n "$avail" ] || exit 1
+[ "$avail" -ge %d ] || exit 1
+if command -v curl >/dev/null 2>&1; then
+  curl -fsS -o /dev/null --max-time 3 "http://127.0.0.1:%d/readyz"
+elif command -v wget >/dev/null 2>&1; then
+  wget -q -O /dev/null -T 3 "http://127.0.0.1:%d/readyz"
+fi
+`, mountPath, minFreeBytes, port, port)
+
+	return corev1.ProbeHandler{
+		Exec: &corev1.ExecAction{Command: []string{"sh", "-c", script}},
 	}
 }
 
@@ -2613,8 +2667,19 @@ func buildReadinessProbe(instance *openclawv1alpha1.OpenClawInstance) *corev1.Pr
 		return nil
 	}
 
+	// Defense-in-depth: when the opt-in disk-aware guard is enabled, render the
+	// readiness probe as an exec check that combines workspace disk health with
+	// the gateway /readyz signal. Liveness/startup stay HTTP-only.
+	handler := buildHTTPProbeHandler("/readyz", instance)
+	if instance.Spec.Probes != nil && instance.Spec.Probes.DiskReadiness != nil {
+		dr := instance.Spec.Probes.DiskReadiness
+		if dr.Enabled != nil && *dr.Enabled {
+			handler = buildDiskReadinessHandler(dr, instance)
+		}
+	}
+
 	probe := &corev1.Probe{
-		ProbeHandler:        buildHTTPProbeHandler("/readyz", instance),
+		ProbeHandler:        handler,
 		InitialDelaySeconds: 5,
 		PeriodSeconds:       5,
 		TimeoutSeconds:      3,

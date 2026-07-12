@@ -5765,9 +5765,11 @@ func TestNormalizeClawHubSlug(t *testing.T) {
 		want  string
 	}{
 		{"bare slug", "mcp-server-fetch", "mcp-server-fetch"},
-		{"@owner/slug", "@anthropic/mcp-server-fetch", "mcp-server-fetch"},
-		{"@slug (no owner)", "@mcp-server-fetch", "mcp-server-fetch"},
-		{"nested path", "@org/sub/skill-name", "skill-name"},
+		{"@owner/slug preserved", "@anthropic/mcp-server-fetch", "@anthropic/mcp-server-fetch"},
+		{"owner/slug gains @", "anthropic/mcp-server-fetch", "@anthropic/mcp-server-fetch"},
+		{"ambiguous @owner/slug preserved", "@ivangdavila/excel-xlsx", "@ivangdavila/excel-xlsx"},
+		{"@slug (no owner) trimmed to bare", "@mcp-server-fetch", "mcp-server-fetch"},
+		{"nested path preserved", "@org/sub/skill-name", "@org/sub/skill-name"},
 		{"npm: passthrough", "npm:@openclaw/matrix", "npm:@openclaw/matrix"},
 		{"pack: passthrough", "pack:paperclipinc/skills/image-gen", "pack:paperclipinc/skills/image-gen"},
 	}
@@ -5781,8 +5783,28 @@ func TestNormalizeClawHubSlug(t *testing.T) {
 }
 
 func TestParseSkillEntry_ClawHub(t *testing.T) {
+	// Owner-qualified refs must be passed through verbatim so ClawHub can
+	// disambiguate slugs shared across owners (#558).
 	got := parseSkillEntry("@anthropic/mcp-server-fetch")
-	want := "_install_skill 'mcp-server-fetch'"
+	want := "_install_skill '@anthropic/mcp-server-fetch'"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestParseSkillEntry_ClawHub_AmbiguousOwnerQualified(t *testing.T) {
+	// Regression for #558: ambiguous slugs must keep the @owner/ prefix.
+	got := parseSkillEntry("@ivangdavila/excel-xlsx")
+	want := "_install_skill '@ivangdavila/excel-xlsx'"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestParseSkillEntry_ClawHub_OwnerQualifiedNoAt(t *testing.T) {
+	// Defensive: "owner/slug" without a leading @ is normalized to "@owner/slug".
+	got := parseSkillEntry("ivangdavila/excel-xlsx")
+	want := "_install_skill '@ivangdavila/excel-xlsx'"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -5835,11 +5857,30 @@ func TestBuildSkillsScript_WithSkills(t *testing.T) {
 	if !strings.Contains(script, skillInstallWrapper) {
 		t.Error("script should contain the _install_skill wrapper")
 	}
-	if !strings.Contains(script, "_install_skill 'mcp-server-fetch'") {
-		t.Error("script should contain _install_skill for mcp-server-fetch (normalized from @anthropic/mcp-server-fetch)")
+	if !strings.Contains(script, "_install_skill '@anthropic/mcp-server-fetch'") {
+		t.Error("script should contain _install_skill with the owner-qualified @anthropic/mcp-server-fetch preserved")
 	}
-	if !strings.Contains(script, "_install_skill 'copilot-skill'") {
-		t.Error("script should contain _install_skill for copilot-skill (normalized from @github/copilot-skill)")
+	if !strings.Contains(script, "_install_skill '@github/copilot-skill'") {
+		t.Error("script should contain _install_skill with the owner-qualified @github/copilot-skill preserved")
+	}
+}
+
+func TestBuildSkillsScript_OwnerQualifiedAndBare(t *testing.T) {
+	// #558: owner-qualified refs preserved verbatim, bare slugs stay bare, in one list.
+	instance := newTestInstance("mixed-owner-bare")
+	instance.Spec.Skills = []string{"@ivangdavila/excel-xlsx", "pandas"}
+
+	script := BuildSkillsScript(instance)
+
+	if !strings.Contains(script, "_install_skill '@ivangdavila/excel-xlsx'") {
+		t.Error("script should preserve the owner-qualified @ivangdavila/excel-xlsx ref")
+	}
+	if !strings.Contains(script, "_install_skill 'pandas'") {
+		t.Error("script should keep the bare pandas slug bare")
+	}
+	// The bare slug must not accidentally acquire an @ prefix.
+	if strings.Contains(script, "_install_skill '@pandas'") {
+		t.Error("bare slug pandas must not be rewritten to @pandas")
 	}
 }
 
@@ -5862,8 +5903,8 @@ func TestBuildSkillsScript_MixedPrefixes(t *testing.T) {
 	if !strings.Contains(script, skillInstallWrapper) {
 		t.Error("script should contain the _install_skill wrapper (has clawhub skills)")
 	}
-	if !strings.Contains(script, "_install_skill 'mcp-server-fetch'") {
-		t.Error("script should contain _install_skill for clawhub skill (normalized)")
+	if !strings.Contains(script, "_install_skill '@anthropic/mcp-server-fetch'") {
+		t.Error("script should contain _install_skill with the owner-qualified clawhub ref preserved")
 	}
 	if !strings.Contains(script, "npm install -g '@openclaw/matrix'") {
 		t.Error("script should contain npm install -g for @openclaw/matrix")
@@ -5923,7 +5964,7 @@ func TestBuildSkillsScript_WrapperOrdering(t *testing.T) {
 	setEIdx := strings.Index(script, "set -e")
 	setupIdx := strings.Index(script, "mkdir -p /home/openclaw/.openclaw/skills")
 	wrapperIdx := strings.Index(script, "_install_skill()")
-	installIdx := strings.Index(script, "_install_skill 'mcp-server-fetch'")
+	installIdx := strings.Index(script, "_install_skill '@anthropic/mcp-server-fetch'")
 
 	if setEIdx == -1 || setupIdx == -1 || wrapperIdx == -1 || installIdx == -1 {
 		t.Fatalf("missing expected content in script:\n%s", script)
@@ -13177,5 +13218,104 @@ func TestBuildStatefulSet_NoPluginsNoNodePath(t *testing.T) {
 		if ev.Name == "NODE_PATH" {
 			t.Error("NODE_PATH should not be set when no plugins are defined")
 		}
+	}
+}
+
+// --- Disk-aware readiness guard (spec.probes.diskReadiness) ---
+
+func TestBuildStatefulSet_DiskReadiness_DefaultKeepsHTTPProbe(t *testing.T) {
+	// No diskReadiness configured: readiness stays an HTTP GET /readyz probe.
+	instance := newTestInstance("disk-readiness-default")
+	main := BuildStatefulSet(instance, "", nil, nil, nil).Spec.Template.Spec.Containers[0]
+
+	if main.ReadinessProbe == nil {
+		t.Fatal("readiness probe should not be nil")
+	}
+	if main.ReadinessProbe.HTTPGet == nil {
+		t.Fatal("readiness probe should be HTTP GET by default")
+	}
+	if main.ReadinessProbe.Exec != nil {
+		t.Error("readiness probe should not be an exec probe by default")
+	}
+	if got := main.ReadinessProbe.HTTPGet.Path; got != "/readyz" {
+		t.Errorf("readiness HTTP path = %q, want /readyz", got)
+	}
+}
+
+func TestBuildStatefulSet_DiskReadiness_DisabledKeepsHTTPProbe(t *testing.T) {
+	instance := newTestInstance("disk-readiness-disabled")
+	instance.Spec.Probes = &openclawv1alpha1.ProbesSpec{
+		DiskReadiness: &openclawv1alpha1.DiskReadinessSpec{Enabled: Ptr(false)},
+	}
+	main := BuildStatefulSet(instance, "", nil, nil, nil).Spec.Template.Spec.Containers[0]
+
+	if main.ReadinessProbe.HTTPGet == nil || main.ReadinessProbe.Exec != nil {
+		t.Error("readiness probe should remain HTTP when diskReadiness is disabled")
+	}
+}
+
+func TestBuildStatefulSet_DiskReadiness_EnabledRendersExec(t *testing.T) {
+	instance := newTestInstance("disk-readiness-on")
+	instance.Spec.Probes = &openclawv1alpha1.ProbesSpec{
+		DiskReadiness: &openclawv1alpha1.DiskReadinessSpec{Enabled: Ptr(true)},
+	}
+	main := BuildStatefulSet(instance, "", nil, nil, nil).Spec.Template.Spec.Containers[0]
+
+	rp := main.ReadinessProbe
+	if rp == nil || rp.Exec == nil {
+		t.Fatal("readiness probe should be an exec probe when diskReadiness is enabled")
+	}
+	if rp.HTTPGet != nil {
+		t.Error("readiness probe should not retain an HTTP handler when exec is used")
+	}
+	if len(rp.Exec.Command) != 3 || rp.Exec.Command[0] != "sh" || rp.Exec.Command[1] != "-c" {
+		t.Fatalf("exec command = %v, want [sh -c <script>]", rp.Exec.Command)
+	}
+	script := rp.Exec.Command[2]
+	for _, want := range []string{
+		WorkspaceDataMountPath, // default workspace path
+		"67108864",             // default 64Mi threshold in bytes
+		"/readyz",              // gateway readiness still checked
+		"df -Pk",               // free-space check
+		"-w \"$p\"",            // writability check
+		// exec probe targets the same loopback port the HTTP probe would use
+		fmt.Sprintf("127.0.0.1:%d/readyz", probeTargetPort(instance)),
+	} {
+		if !strings.Contains(script, want) {
+			t.Errorf("exec script missing %q\nscript:\n%s", want, script)
+		}
+	}
+
+	// Timing fields preserved.
+	if rp.InitialDelaySeconds != 5 || rp.PeriodSeconds != 5 || rp.FailureThreshold != 3 {
+		t.Errorf("readiness timing changed: %+v", rp)
+	}
+
+	// Liveness/startup remain HTTP /healthz so a full PVC does not CrashLoop.
+	if main.LivenessProbe == nil || main.LivenessProbe.HTTPGet == nil || main.LivenessProbe.HTTPGet.Path != "/healthz" {
+		t.Error("liveness probe should remain HTTP GET /healthz")
+	}
+	if main.StartupProbe == nil || main.StartupProbe.HTTPGet == nil || main.StartupProbe.HTTPGet.Path != "/healthz" {
+		t.Error("startup probe should remain HTTP GET /healthz")
+	}
+}
+
+func TestBuildStatefulSet_DiskReadiness_CustomPathAndThreshold(t *testing.T) {
+	instance := newTestInstance("disk-readiness-custom")
+	instance.Spec.Probes = &openclawv1alpha1.ProbesSpec{
+		DiskReadiness: &openclawv1alpha1.DiskReadinessSpec{
+			Enabled: Ptr(true),
+			Path:    "/data/workspace",
+			MinFree: "1Gi",
+		},
+	}
+	main := BuildStatefulSet(instance, "", nil, nil, nil).Spec.Template.Spec.Containers[0]
+
+	script := main.ReadinessProbe.Exec.Command[2]
+	if !strings.Contains(script, "'/data/workspace'") {
+		t.Errorf("exec script should check custom path, got:\n%s", script)
+	}
+	if !strings.Contains(script, "1073741824") { // 1Gi in bytes
+		t.Errorf("exec script should use 1Gi threshold in bytes, got:\n%s", script)
 	}
 }

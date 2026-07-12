@@ -285,6 +285,25 @@ _Appears in:_
 | `runAsUser` _integer_ | RunAsUser is the UID to run the entrypoint of the container process.<br />When not set, inherits from podSecurityContext.runAsUser. |  | Optional: \{\} <br /> |
 
 
+#### DiskReadinessSpec
+
+
+
+DiskReadinessSpec configures the optional disk-aware readiness guard for
+PVC-backed OpenClaw workspaces.
+
+
+
+_Appears in:_
+- [ProbesSpec](#probesspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled turns on the disk-aware readiness guard. Defaults to false, so<br />existing deployments are unaffected unless they explicitly opt in. | false | Optional: \{\} <br /> |
+| `path` _string_ | Path is the workspace mount path checked for writability and free space.<br />Defaults to the OpenClaw workspace data mount (/home/openclaw/.openclaw). |  | Optional: \{\} <br /> |
+| `minFree` _string_ | MinFree is the minimum free space the workspace volume must have for the<br />pod to be considered Ready, expressed as a Kubernetes quantity<br />(e.g. "100Mi", "1Gi"). Defaults to "64Mi". |  | Optional: \{\} <br /> |
+
+
 #### GatewaySpec
 
 
@@ -891,6 +910,7 @@ _Appears in:_
 | `liveness` _[ProbeSpec](#probespec)_ | Liveness probe configuration |  | Optional: \{\} <br /> |
 | `readiness` _[ProbeSpec](#probespec)_ | Readiness probe configuration |  | Optional: \{\} <br /> |
 | `startup` _[ProbeSpec](#probespec)_ | Startup probe configuration |  | Optional: \{\} <br /> |
+| `diskReadiness` _[DiskReadinessSpec](#diskreadinessspec)_ | DiskReadiness configures an optional, opt-in defense-in-depth readiness<br />guard for PVC-backed workspaces. When enabled, the readiness probe is<br />rendered as an exec probe that also verifies the workspace volume is<br />writable and has free space above a threshold, so a full or read-only<br />PVC marks the pod NotReady (draining it from Service endpoints) instead<br />of silently accepting traffic it cannot persist. Liveness and startup<br />probes are unaffected, so a full PVC does not turn into a CrashLoopBackOff.<br />The application-level /readyz endpoint remains the primary readiness<br />signal; this guard is secondary. Defaults to disabled. |  | Optional: \{\} <br /> |
 
 
 #### PrometheusRuleSpec
