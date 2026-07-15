@@ -470,10 +470,10 @@ func ParseQuantity(s, defaultValue string) resource.Quantity {
 //	ApplyRegistryOverride("ghcr.io/openclaw/openclaw:latest", "my-registry.example.com")
 //	→ "my-registry.example.com/openclaw/openclaw:latest"
 //
-//	ApplyRegistryOverride("ollama/ollama:latest", "my-registry.example.com")
+//	ApplyRegistryOverride("docker.io/ollama/ollama:latest", "my-registry.example.com")
 //	→ "my-registry.example.com/ollama/ollama:latest"
 //
-//	ApplyRegistryOverride("nginx:1.27-alpine", "my-registry.example.com")
+//	ApplyRegistryOverride("docker.io/library/nginx:1.27-alpine", "my-registry.example.com")
 //	→ "my-registry.example.com/nginx:1.27-alpine"
 //
 //	ApplyRegistryOverride("ghcr.io/openclaw/openclaw:latest", "")
@@ -483,6 +483,8 @@ func ApplyRegistryOverride(image, registry string) string {
 		return image
 	}
 	registry = strings.TrimRight(registry, "/")
+	image = strings.TrimPrefix(image, "docker.io/library/")
+	image = strings.TrimPrefix(image, "docker.io/")
 
 	slashIndex := strings.Index(image, "/")
 	if slashIndex == -1 {
