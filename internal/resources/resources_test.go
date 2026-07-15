@@ -5622,8 +5622,8 @@ func TestBuildStatefulSet_OverwriteMode_BusyboxImage(t *testing.T) {
 	}
 
 	initC := initContainers[0]
-	if initC.Image != "busybox:1.37" {
-		t.Errorf("overwrite mode init container image = %q, want busybox:1.37", initC.Image)
+	if initC.Image != "docker.io/library/busybox:1.37" {
+		t.Errorf("overwrite mode init container image = %q, want docker.io/library/busybox:1.37", initC.Image)
 	}
 }
 
@@ -9203,7 +9203,7 @@ func TestBuildStatefulSet_OllamaEnabled(t *testing.T) {
 	}
 
 	// Ollama image defaults
-	if ollama.Image != "ollama/ollama:latest" {
+	if ollama.Image != "docker.io/ollama/ollama:latest" {
 		t.Errorf("ollama image = %q, want default", ollama.Image)
 	}
 
