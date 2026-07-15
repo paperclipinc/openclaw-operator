@@ -12497,6 +12497,28 @@ func TestBuildStatefulSet_ChromiumMigratesDeprecatedImage(t *testing.T) {
 	t.Fatal("chromium init container not found")
 }
 
+func TestBuildStatefulSet_ChromiumMigratesLegacyUnqualifiedImage(t *testing.T) {
+	instance := newTestInstance("migrate-unqualified-img")
+	instance.Spec.Chromium.Enabled = true
+	instance.Spec.Chromium.Image.Repository = LegacyChromiumImage
+	instance.Spec.Chromium.Image.Tag = "latest"
+
+	sts := BuildStatefulSet(instance, "", nil, nil, nil)
+	for _, c := range sts.Spec.Template.Spec.InitContainers {
+		if c.Name == "chromium" {
+			expectedImage := DefaultChromiumImage + ":" + DefaultChromiumTag
+			if c.Image != expectedImage {
+				t.Errorf("chromium image = %q, want %q (should migrate legacy unqualified image)", c.Image, expectedImage)
+			}
+			if len(c.Command) != len(ChromiumEntrypointCommand) {
+				t.Errorf("chromium Command after migration = %v, want ChromiumEntrypointCommand", c.Command)
+			}
+			return
+		}
+	}
+	t.Fatal("chromium init container not found")
+}
+
 func TestChromiumArgs_Deduplication(t *testing.T) {
 	instance := newTestInstance("cdp-dedup")
 	instance.Spec.Chromium.Enabled = true

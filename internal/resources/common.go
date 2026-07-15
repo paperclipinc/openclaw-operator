@@ -69,6 +69,11 @@ const (
 	// time so upgrades work without manual spec edits.
 	DeprecatedChromiumImage = "ghcr.io/browserless/chromium"
 
+	// LegacyChromiumImage is the old unqualified Docker Hub default. Instances
+	// created before fully-qualified defaults may have this value stored by the
+	// API server and should reconcile as the current default image.
+	LegacyChromiumImage = "chromedp/headless-shell"
+
 	// DefaultChromiumTag is the default tag for the Chromium sidecar image.
 	// "stable" tracks the latest Chrome stable channel release.
 	DefaultChromiumTag = "stable"

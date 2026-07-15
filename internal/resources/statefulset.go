@@ -1694,12 +1694,12 @@ func buildChromiumContainer(instance *openclawv1alpha1.OpenClawInstance) corev1.
 		repo = DefaultChromiumImage
 	}
 
-	// Migrate instances created before v0.22.1 that have the old browserless
-	// image stored via kubebuilder defaults. The old image no longer exists
-	// on GHCR, and even if it did, its entrypoint is incompatible with the
-	// Chrome launch flags we pass as container args (#396).
-	if repo == DeprecatedChromiumImage {
-		rLog.Info("migrating deprecated chromium image to default",
+	// Migrate instances with old stored defaults to the current fully-qualified
+	// image. The browserless image no longer exists on GHCR, and even if it did,
+	// its entrypoint is incompatible with the Chrome launch flags we pass as
+	// container args (#396).
+	if repo == DeprecatedChromiumImage || repo == LegacyChromiumImage {
+		rLog.Info("migrating stored chromium image default",
 			"old", repo, "new", DefaultChromiumImage)
 		repo = DefaultChromiumImage
 	}
