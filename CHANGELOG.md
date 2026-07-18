@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.0](https://github.com/paperclipinc/openclaw-operator/compare/v0.36.5...v0.37.0) (2026-07-18)
+
+
+### Features
+
+* **probes:** opt-in disk-aware readiness guard for PVC-backed workspaces ([#557](https://github.com/paperclipinc/openclaw-operator/issues/557)) ([fb98a92](https://github.com/paperclipinc/openclaw-operator/commit/fb98a92df51dbbdd9da45a0a699dab800d0baa20))
+
+
+### Bug Fixes
+
+* **probes:** compare disk readiness free space as integer KiB ([#569](https://github.com/paperclipinc/openclaw-operator/issues/569)) ([3f5dd83](https://github.com/paperclipinc/openclaw-operator/commit/3f5dd83d9a3d6415cc5db5626ddbfd389d7dd719))
+* **skills:** converge PVC-seeded skill pack files to the declared revision ([#566](https://github.com/paperclipinc/openclaw-operator/issues/566)) ([35d2987](https://github.com/paperclipinc/openclaw-operator/commit/35d2987727ead34400ecf0d0417d170f1ee5aff7))
+* **skills:** preserve owner-qualified ClawHub refs for disambiguation ([#559](https://github.com/paperclipinc/openclaw-operator/issues/559)) ([bb2f3aa](https://github.com/paperclipinc/openclaw-operator/commit/bb2f3aaeb8078d602bf38feb47d375aa045f13d1))
+
 ## [0.36.5](https://github.com/paperclipinc/openclaw-operator/compare/v0.36.4...v0.36.5) (2026-06-20)
 
 
