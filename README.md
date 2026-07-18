@@ -83,6 +83,7 @@ Every request is validated against the instance's allowlist policy. Protected co
 | **Scalable** | Auto-scaling | HPA integration with CPU and memory metrics, min/max replica bounds, automatic StatefulSet replica management |
 | **Operational** | Instance suspension | Scale to zero with `spec.suspended: true` - all non-runtime resources remain managed, resume instantly with `false` |
 | **Resilient** | Self-healing lifecycle | PodDisruptionBudgets, health probes, automatic config rollouts via content hashing, 5-minute drift detection |
+| **Disk-Aware Readiness** | Opt-in ENOSPC guard | `spec.probes.diskReadiness` renders the readiness probe as an exec check that ANDs the gateway `/readyz` signal with a workspace writability + free-space check, so a full or read-only PVC drains the pod from Service endpoints instead of silently accepting writes it cannot persist. Liveness/startup stay HTTP so a full disk never turns into a CrashLoopBackOff. Defaulted off. |
 | **Backup/Restore** | S3-backed snapshots | Automatic backup to S3-compatible storage on deletion, pre-update, and on a cron schedule; restore into a new instance from any snapshot |
 | **Workspace Seeding** | Initial files & dirs | Pre-populate the workspace with files and directories before the agent starts; reference an external ConfigMap for GitOps workflows |
 | **Gateway Auth** | Auto-generated tokens | Automatic gateway token Secret per instance, bypassing mDNS pairing (unusable in k8s) |
@@ -286,6 +287,24 @@ By default, each pod includes an nginx reverse proxy sidecar that forwards traff
 - To replace the built-in proxy with your own (e.g., Envoy, a signing proxy), disable it and add your proxy via `spec.sidecars`
 - **Warning:** Do not set `gateway.bind: loopback` in your config JSON when the proxy is disabled - the gateway will only listen on `127.0.0.1` with nothing forwarding external traffic, making the pod unreachable. The operator emits a `GatewayBindConflict` warning event if this misconfiguration is detected.
 - **TLS:** When the proxy is disabled, the gateway serves plaintext `ws://` on `0.0.0.0`. Ensure your replacement proxy or Ingress handles TLS termination to avoid exposing unencrypted WebSocket traffic (CWE-319).
+
+### Disk-aware readiness
+
+By default the readiness probe is an HTTP `GET /readyz` against the gateway. For PVC-backed instances, `/readyz` can stay green while the workspace volume is full or read-only (ENOSPC), so the pod keeps receiving traffic while workspace writes fail. Enable the opt-in disk-aware readiness guard to turn the readiness probe into an exec check that combines the gateway `/readyz` signal with a workspace writability and free-space check:
+
+```yaml
+spec:
+  probes:
+    diskReadiness:
+      enabled: true            # default: false (existing deployments are unchanged when unset)
+      path: /home/openclaw/.openclaw   # optional; defaults to the workspace data mount
+      minFree: 128Mi           # optional; minimum free space, a Kubernetes quantity (default 64Mi)
+```
+
+- When enabled, the readiness probe becomes `sh -c` exec script that (a) verifies `path` is writable (`test -w`), (b) checks free space with `df` against `minFree`, then (c) defers to the gateway `/readyz` on the same loopback port the HTTP probe would use. The pod is Ready only if all checks pass; the script fails closed (non-zero exit) on any failure.
+- **Liveness and startup stay HTTP-only** (`GET /healthz`), so a full PVC yields `NotReady` (draining the pod from Service endpoints) rather than a restart loop / CrashLoopBackOff.
+- The exec script uses only POSIX `sh`, `test`, `df`, and `awk`. The `/readyz` HTTP call uses `curl` or `wget` if present and is skipped gracefully if neither is in the image, so a missing HTTP client never makes a healthy pod permanently `NotReady` (disk checks still run).
+- This is a secondary, defense-in-depth guard; the application-level `/readyz` endpoint remains the primary readiness signal.
 
 ### Gateway authentication
 
@@ -554,6 +573,8 @@ spec:
 Raw mode does not inject config entries into `config.raw.skills.entries` -- use manifest mode if you need that. The operator refuses to install if GitHub truncates the tree response for very large repositories (add a `skillpack.json` manifest in that case).
 
 The operator resolves packs via the GitHub Contents + Git Trees APIs (cached for 5 minutes), seeds files into the workspace via the init container, and (in manifest mode) injects config entries into `config.raw.skills.entries` with user overrides taking precedence. Set `GITHUB_TOKEN` on the operator deployment for private repo access.
+
+**Updating pack contents.** By default (`spec.skillPackUpdatePolicy: Replace`), pack-seeded files converge to the declared pack revision on every pod start: changing a pinned `@tag`/`@commit` (or pushing to a tracked branch) overwrites the seeded files, and files that are no longer part of any declared pack are removed. The operator tracks what it seeded in a manifest at `/data/.skillpack-manifest` on the data volume, so user-created workspace files are never touched. Files at pack-declared paths are operator-managed -- local edits to them are reverted on restart. Set `spec.skillPackUpdatePolicy: CreateOnly` to opt out and keep the legacy seed-once behavior (files are never overwritten or removed after first seeding; updating a pinned revision then has no effect on already-seeded files).
 
 ### Plugin installation
 

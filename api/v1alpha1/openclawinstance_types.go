@@ -40,6 +40,26 @@ type OpenClawInstanceSpec struct {
 	// +optional
 	Skills []string `json:"skills,omitempty"`
 
+	// SkillPackUpdatePolicy controls how workspace files seeded from "pack:"
+	// skill entries are reconciled on pod start.
+	//
+	// "Replace" (default) converges seeded pack files to the declared pack
+	// revision on every pod start: changed files are overwritten and files that
+	// were seeded by a previous revision but are no longer part of any declared
+	// pack are removed. The operator tracks the seeded file set in a manifest
+	// at /data/.skillpack-manifest on the data volume.
+	//
+	// "CreateOnly" preserves the legacy behavior: pack files are only copied
+	// when absent and never overwritten or removed, so updating a pinned pack
+	// revision does not refresh already-seeded contents (see #564).
+	//
+	// Only files at paths declared by pack: entries are affected; files from
+	// spec.workspace.initialFiles are always seeded create-only.
+	// +kubebuilder:validation:Enum=Replace;CreateOnly
+	// +kubebuilder:default=Replace
+	// +optional
+	SkillPackUpdatePolicy string `json:"skillPackUpdatePolicy,omitempty"`
+
 	// Plugins is a list of plugins to install via init container.
 	// Each entry is an npm package name (e.g., "@openclaw/matrix" or
 	// "@martian-engineering/lossless-claw"). An optional "npm:" prefix is
@@ -1161,6 +1181,39 @@ type ProbesSpec struct {
 	// Startup probe configuration
 	// +optional
 	Startup *ProbeSpec `json:"startup,omitempty"`
+
+	// DiskReadiness configures an optional, opt-in defense-in-depth readiness
+	// guard for PVC-backed workspaces. When enabled, the readiness probe is
+	// rendered as an exec probe that also verifies the workspace volume is
+	// writable and has free space above a threshold, so a full or read-only
+	// PVC marks the pod NotReady (draining it from Service endpoints) instead
+	// of silently accepting traffic it cannot persist. Liveness and startup
+	// probes are unaffected, so a full PVC does not turn into a CrashLoopBackOff.
+	// The application-level /readyz endpoint remains the primary readiness
+	// signal; this guard is secondary. Defaults to disabled.
+	// +optional
+	DiskReadiness *DiskReadinessSpec `json:"diskReadiness,omitempty"`
+}
+
+// DiskReadinessSpec configures the optional disk-aware readiness guard for
+// PVC-backed OpenClaw workspaces.
+type DiskReadinessSpec struct {
+	// Enabled turns on the disk-aware readiness guard. Defaults to false, so
+	// existing deployments are unaffected unless they explicitly opt in.
+	// +kubebuilder:default=false
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Path is the workspace mount path checked for writability and free space.
+	// Defaults to the OpenClaw workspace data mount (/home/openclaw/.openclaw).
+	// +optional
+	Path string `json:"path,omitempty"`
+
+	// MinFree is the minimum free space the workspace volume must have for the
+	// pod to be considered Ready, expressed as a Kubernetes quantity
+	// (e.g. "100Mi", "1Gi"). Defaults to "64Mi".
+	// +optional
+	MinFree string `json:"minFree,omitempty"`
 }
 
 // ProbeSpec defines a health probe

@@ -285,6 +285,25 @@ _Appears in:_
 | `runAsUser` _integer_ | RunAsUser is the UID to run the entrypoint of the container process.<br />When not set, inherits from podSecurityContext.runAsUser. |  | Optional: \{\} <br /> |
 
 
+#### DiskReadinessSpec
+
+
+
+DiskReadinessSpec configures the optional disk-aware readiness guard for
+PVC-backed OpenClaw workspaces.
+
+
+
+_Appears in:_
+- [ProbesSpec](#probesspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled turns on the disk-aware readiness guard. Defaults to false, so<br />existing deployments are unaffected unless they explicitly opt in. | false | Optional: \{\} <br /> |
+| `path` _string_ | Path is the workspace mount path checked for writability and free space.<br />Defaults to the OpenClaw workspace data mount (/home/openclaw/.openclaw). |  | Optional: \{\} <br /> |
+| `minFree` _string_ | MinFree is the minimum free space the workspace volume must have for the<br />pod to be considered Ready, expressed as a Kubernetes quantity<br />(e.g. "100Mi", "1Gi"). Defaults to "64Mi". |  | Optional: \{\} <br /> |
+
+
 #### GatewaySpec
 
 
@@ -724,6 +743,7 @@ _Appears in:_
 | `config` _[ConfigSpec](#configspec)_ | Config specifies the OpenClaw configuration |  | Optional: \{\} <br /> |
 | `workspace` _[WorkspaceSpec](#workspacespec)_ | Workspace configures initial workspace files seeded into the instance.<br />Files are copied once on first boot and never overwritten, so agent<br />modifications survive pod restarts. |  | Optional: \{\} <br /> |
 | `skills` _string array_ | Skills is a list of skills to install via init container.<br />Each entry is either a ClawHub skill identifier (e.g., "@anthropic/mcp-server-fetch")<br />or an npm package prefixed with "npm:" (e.g., "npm:@openclaw/matrix").<br />npm lifecycle scripts are disabled for security (see #91). |  | MaxItems: 20 <br />Optional: \{\} <br /> |
+| `skillPackUpdatePolicy` _string_ | SkillPackUpdatePolicy controls how workspace files seeded from "pack:"<br />skill entries are reconciled on pod start.<br />"Replace" (default) converges seeded pack files to the declared pack<br />revision on every pod start: changed files are overwritten and files that<br />were seeded by a previous revision but are no longer part of any declared<br />pack are removed. The operator tracks the seeded file set in a manifest<br />at /data/.skillpack-manifest on the data volume.<br />"CreateOnly" preserves the legacy behavior: pack files are only copied<br />when absent and never overwritten or removed, so updating a pinned pack<br />revision does not refresh already-seeded contents (see #564).<br />Only files at paths declared by pack: entries are affected; files from<br />spec.workspace.initialFiles are always seeded create-only. | Replace | Enum: [Replace CreateOnly] <br />Optional: \{\} <br /> |
 | `plugins` _string array_ | Plugins is a list of plugins to install via init container.<br />Each entry is an npm package name (e.g., "@openclaw/matrix" or<br />"@martian-engineering/lossless-claw"). An optional "npm:" prefix is<br />accepted and stripped before installation.<br />Installation goes through the OpenClaw CLI's ClawHub installer<br />("openclaw plugins install clawhub:<pkg>") rather than raw npm install<br />so packages published with workspace:* dependency markers resolve<br />correctly. npm lifecycle scripts are disabled for security. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
 | `envFrom` _[EnvFromSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envfromsource-v1-core) array_ | EnvFrom is a list of sources to populate environment variables from<br />Use this for API keys and other secrets (e.g., ANTHROPIC_API_KEY, OPENAI_API_KEY) |  | Optional: \{\} <br /> |
 | `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Env is a list of environment variables to set in the container |  | Optional: \{\} <br /> |
@@ -890,6 +910,7 @@ _Appears in:_
 | `liveness` _[ProbeSpec](#probespec)_ | Liveness probe configuration |  | Optional: \{\} <br /> |
 | `readiness` _[ProbeSpec](#probespec)_ | Readiness probe configuration |  | Optional: \{\} <br /> |
 | `startup` _[ProbeSpec](#probespec)_ | Startup probe configuration |  | Optional: \{\} <br /> |
+| `diskReadiness` _[DiskReadinessSpec](#diskreadinessspec)_ | DiskReadiness configures an optional, opt-in defense-in-depth readiness<br />guard for PVC-backed workspaces. When enabled, the readiness probe is<br />rendered as an exec probe that also verifies the workspace volume is<br />writable and has free space above a threshold, so a full or read-only<br />PVC marks the pod NotReady (draining it from Service endpoints) instead<br />of silently accepting traffic it cannot persist. Liveness and startup<br />probes are unaffected, so a full PVC does not turn into a CrashLoopBackOff.<br />The application-level /readyz endpoint remains the primary readiness<br />signal; this guard is secondary. Defaults to disabled. |  | Optional: \{\} <br /> |
 
 
 #### PrometheusRuleSpec

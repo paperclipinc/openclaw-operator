@@ -135,6 +135,14 @@ var _ = Describe("Skill Pack Resolution", func() {
 			Expect(script).To(ContainSubstring(helloKey),
 				"init script should copy hello.sh from workspace ConfigMap")
 
+			// Default Replace policy (#564): pack files are copied
+			// unconditionally and tracked in a manifest so a pinned revision
+			// bump refreshes already-seeded contents.
+			Expect(script).NotTo(ContainSubstring("[ -f /data/workspace/'skills/test-skill/SKILL.md' ] ||"),
+				"Replace policy should not seed pack files conditionally")
+			Expect(script).To(ContainSubstring("mv /data/.skillpack-manifest.new /data/.skillpack-manifest"),
+				"init script should maintain the skill pack manifest (#564)")
+
 			// Verify the config ConfigMap has skill entries injected
 			configCM := &corev1.ConfigMap{}
 			Eventually(func() error {

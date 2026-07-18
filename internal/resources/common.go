@@ -31,6 +31,15 @@ const (
 	// GatewayPort is the port for the OpenClaw gateway WebSocket server
 	GatewayPort = 18789
 
+	// WorkspaceDataMountPath is the in-container mount path of the persistent
+	// "data" volume that holds the OpenClaw workspace. It is the default path
+	// checked by the optional disk-aware readiness guard (spec.probes.diskReadiness).
+	WorkspaceDataMountPath = "/home/openclaw/.openclaw"
+
+	// DefaultDiskReadinessMinFree is the default minimum free space the
+	// workspace volume must have for the disk-aware readiness guard to pass.
+	DefaultDiskReadinessMinFree = "64Mi"
+
 	// CanvasPort is the port for the OpenClaw canvas HTTP server
 	CanvasPort = 18793
 

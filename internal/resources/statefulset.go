@@ -837,18 +837,21 @@ func BuildInitScript(instance *openclawv1alpha1.OpenClawInstance, externalWorksp
 					shellQuote(wsPath), shellQuote(cmKey), shellQuote(wsPath)))
 		}
 
-		// Skill pack files use mapped paths (ConfigMap key differs from workspace path)
-		if HasSkillPackFiles(skillPacks) {
-			mappedKeys := make([]string, 0, len(skillPacks.PathMapping))
-			for cmKey := range skillPacks.PathMapping {
-				mappedKeys = append(mappedKeys, cmKey)
+		// Skill pack files use mapped paths (ConfigMap key differs from workspace path).
+		// Replace mode (default) converges seeded files to the declared pack
+		// revision: overwrite on every start and remove files seeded by a previous
+		// revision that are no longer declared, tracked via a manifest on the data
+		// volume (#564). CreateOnly preserves the legacy seed-if-absent behavior.
+		if instance.Spec.SkillPackUpdatePolicy == SkillPackUpdatePolicyCreateOnly {
+			if HasSkillPackFiles(skillPacks) {
+				for _, cmKey := range sortedPackKeys(skillPacks) {
+					wsPath := skillPacks.PathMapping[cmKey]
+					lines = append(lines, fmt.Sprintf("[ -f /data/workspace/%s ] || cp /workspace-init/%s /data/workspace/%s",
+						shellQuote(wsPath), shellQuote(cmKey), shellQuote(wsPath)))
+				}
 			}
-			sort.Strings(mappedKeys)
-			for _, cmKey := range mappedKeys {
-				wsPath := skillPacks.PathMapping[cmKey]
-				lines = append(lines, fmt.Sprintf("[ -f /data/workspace/%s ] || cp /workspace-init/%s /data/workspace/%s",
-					shellQuote(wsPath), shellQuote(cmKey), shellQuote(wsPath)))
-			}
+		} else {
+			lines = append(lines, buildSkillPackSyncLines(skillPacks)...)
 		}
 	}
 
@@ -931,6 +934,90 @@ func BuildInitScript(instance *openclawv1alpha1.OpenClawInstance, externalWorksp
 	return strings.Join(lines, "\n")
 }
 
+// sortedPackKeys returns the ConfigMap keys of the resolved skill pack files
+// in sorted order for deterministic script output.
+func sortedPackKeys(skillPacks *ResolvedSkillPacks) []string {
+	keys := make([]string, 0, len(skillPacks.PathMapping))
+	for cmKey := range skillPacks.PathMapping {
+		keys = append(keys, cmKey)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// skillPackCleanupLoop removes previously seeded pack files that are not in
+// the desired staging manifest, pruning directories that become empty. Entries
+// that are absolute or contain ".." are skipped so a corrupted manifest can
+// never delete anything outside /data/workspace. Callers must guard it with a
+// check that /data/.skillpack-manifest exists.
+const skillPackCleanupLoop = `while IFS= read -r f; do
+[ -n "$f" ] || continue
+case "$f" in /*|*..*) continue ;; esac
+if ! grep -Fxq -- "$f" /data/.skillpack-manifest.new; then
+rm -f "/data/workspace/$f"
+d=$(dirname -- "$f")
+while [ "$d" != "." ] && [ "$d" != "/" ]; do
+rmdir "/data/workspace/$d" 2>/dev/null || break
+d=$(dirname -- "$d")
+done
+fi
+done < /data/.skillpack-manifest`
+
+// buildSkillPackSyncLines emits the Replace-mode skill pack sync (#564):
+//  1. Write the desired set of pack-seeded workspace paths to a staging
+//     manifest on the data volume (the init container rootfs is read-only and
+//     /tmp is not mounted in overwrite mode, so /data is the only writable spot).
+//  2. Delete files recorded in the previous manifest that are no longer desired.
+//  3. Copy every pack file unconditionally so contents converge to the declared
+//     pack revision.
+//  4. Promote the staging manifest.
+//
+// With no pack files, the sync only runs cleanup when a manifest from a
+// previous revision exists, so instances that never used packs get a no-op.
+func buildSkillPackSyncLines(skillPacks *ResolvedSkillPacks) []string {
+	var lines []string
+
+	if !HasSkillPackFiles(skillPacks) {
+		// All packs were removed (or none declared). Clean up anything a
+		// previous revision seeded, then drop the manifest. No-op unless a
+		// manifest from a previous revision exists.
+		lines = append(lines,
+			"if [ -f /data/.skillpack-manifest ]; then",
+			": > /data/.skillpack-manifest.new",
+			skillPackCleanupLoop,
+			"rm -f /data/.skillpack-manifest.new /data/.skillpack-manifest",
+			"fi")
+		return lines
+	}
+
+	mappedKeys := sortedPackKeys(skillPacks)
+
+	// Desired manifest: one workspace-relative path per line.
+	quoted := make([]string, 0, len(mappedKeys))
+	for _, cmKey := range mappedKeys {
+		quoted = append(quoted, shellQuote(skillPacks.PathMapping[cmKey]))
+	}
+	lines = append(lines,
+		fmt.Sprintf("printf '%%s\\n' %s > /data/.skillpack-manifest.new", strings.Join(quoted, " ")),
+		"if [ -f /data/.skillpack-manifest ]; then",
+		skillPackCleanupLoop,
+		"fi")
+
+	// Unconditional copy so file contents follow the declared revision.
+	for _, cmKey := range mappedKeys {
+		wsPath := skillPacks.PathMapping[cmKey]
+		if dir := path.Dir(wsPath); dir != "." && dir != "/" {
+			lines = append(lines, fmt.Sprintf("mkdir -p /data/workspace/%s", shellQuote(dir)))
+		}
+		lines = append(lines, fmt.Sprintf("cp /workspace-init/%s /data/workspace/%s",
+			shellQuote(cmKey), shellQuote(wsPath)))
+	}
+
+	// Promote the manifest only after the seed completed.
+	lines = append(lines, "mv /data/.skillpack-manifest.new /data/.skillpack-manifest")
+	return lines
+}
+
 // clawHubSkillsSetup prepares a PVC-backed skills directory in the init
 // container. It seeds built-in skills from the container image on first run
 // (cp -rn = no-clobber), then redirects /app/skills to the PVC via symlink
@@ -954,19 +1041,30 @@ const skillInstallWrapper = `_install_skill() {
   fi
 }`
 
-// normalizeClawHubSlug strips the @owner/ prefix from ClawHub skill identifiers.
-// ClawHub CLI expects bare skill names (e.g. "mcp-server-fetch"), but users and
-// documentation sometimes use "@owner/skill-name" format from the ClawHub website URL.
+// normalizeClawHubSlug normalizes a ClawHub skill identifier into the form that
+// `clawhub install` expects.
+//
+// Owner-qualified refs must be passed through verbatim as "@owner/slug" so that
+// ClawHub can disambiguate slugs that exist under multiple owners (#558); passing
+// only the bare slug makes ambiguous installs fail and leaves the pod stuck in
+// Init:CrashLoopBackOff. A defensive "owner/slug" without the leading "@" is
+// normalized to "@owner/slug" as well. Bare slugs (e.g. "mcp-server-fetch") are
+// passed through unchanged, and a stray leading "@" on a bare slug (no owner, no
+// "/") is trimmed so it stays a bare slug (#288). npm: and pack: prefixes are not
+// ClawHub slugs and are returned as-is.
 func normalizeClawHubSlug(entry string) string {
 	// npm: and pack: prefixes are not ClawHub slugs
 	if strings.HasPrefix(entry, "npm:") || strings.HasPrefix(entry, "pack:") {
 		return entry
 	}
-	slug := strings.TrimPrefix(entry, "@")
-	if i := strings.LastIndex(slug, "/"); i >= 0 {
-		slug = slug[i+1:]
+	// Owner-qualified refs contain a "/". Preserve them verbatim so ClawHub can
+	// disambiguate slugs shared across owners, ensuring the leading "@" is
+	// present (so a defensive "owner/slug" becomes "@owner/slug").
+	if strings.Contains(entry, "/") {
+		return "@" + strings.TrimPrefix(entry, "@")
 	}
-	return slug
+	// Bare slug: drop a stray leading "@" since there is no owner to qualify.
+	return strings.TrimPrefix(entry, "@")
 }
 
 // parseSkillEntry returns the shell command to install a single skill entry.
@@ -2465,17 +2563,65 @@ func buildChromiumResourceRequirements(instance *openclawv1alpha1.OpenClawInstan
 // proxy sidecar is enabled, probes target the proxy port (18790) which
 // forwards to the gateway on loopback. When disabled, probes hit the
 // gateway directly on port 18789.
-func buildHTTPProbeHandler(path string, instance *openclawv1alpha1.OpenClawInstance) corev1.ProbeHandler {
-	port := int32(GatewayPort)
-	if IsGatewayProxyEnabled(instance) {
-		port = GatewayProxyPort
-	}
+func buildHTTPProbeHandler(probePath string, instance *openclawv1alpha1.OpenClawInstance) corev1.ProbeHandler {
 	return corev1.ProbeHandler{
 		HTTPGet: &corev1.HTTPGetAction{
-			Path:   path,
-			Port:   intstr.FromInt32(port),
+			Path:   probePath,
+			Port:   intstr.FromInt32(probeTargetPort(instance)),
 			Scheme: corev1.URISchemeHTTP,
 		},
+	}
+}
+
+// probeTargetPort returns the loopback port that readiness checks should hit.
+// When the gateway proxy sidecar is enabled, traffic goes through the proxy
+// port; otherwise it hits the gateway directly.
+func probeTargetPort(instance *openclawv1alpha1.OpenClawInstance) int32 {
+	if IsGatewayProxyEnabled(instance) {
+		return GatewayProxyPort
+	}
+	return int32(GatewayPort)
+}
+
+// buildDiskReadinessHandler renders the exec handler for the optional
+// disk-aware readiness guard. The script first verifies the workspace mount is
+// writable and has free space above the configured threshold, then defers to
+// the gateway /readyz endpoint as the primary readiness signal. The HTTP check
+// gracefully degrades (is skipped) only if neither curl nor wget is present in
+// the image, so a missing HTTP client never makes a healthy pod permanently
+// NotReady. A full or read-only PVC always fails the probe.
+func buildDiskReadinessHandler(spec *openclawv1alpha1.DiskReadinessSpec, instance *openclawv1alpha1.OpenClawInstance) corev1.ProbeHandler {
+	mountPath := spec.Path
+	if mountPath == "" {
+		mountPath = WorkspaceDataMountPath
+	}
+	minFree := ParseQuantity(spec.MinFree, DefaultDiskReadinessMinFree)
+	// Compare in KiB, not bytes: df -Pk already reports integer 1K blocks, and
+	// any awk arithmetic on the column ($4 * 1024) can render the result in
+	// scientific notation (OFMT %.6g, e.g. 1.2642e+10 under busybox awk), which
+	// POSIX [ -ge ] rejects with "Illegal number" (#567). Round the threshold
+	// up so a fractional KiB still requires the full requested free space.
+	minFreeKiB := (minFree.Value() + 1023) / 1024
+	port := probeTargetPort(instance)
+
+	// POSIX sh: the available column from df -Pk is passed through verbatim as
+	// an integer string. Quoting keeps paths with spaces safe. set -e
+	// propagates the first failing check as a non-zero exit (=> NotReady).
+	script := fmt.Sprintf(`set -e
+p='%s'
+[ -w "$p" ] || exit 1
+avail_kib=$(df -Pk "$p" 2>/dev/null | awk 'NR==2 {print $4}')
+[ -n "$avail_kib" ] || exit 1
+[ "$avail_kib" -ge %d ] || exit 1
+if command -v curl >/dev/null 2>&1; then
+  curl -fsS -o /dev/null --max-time 3 "http://127.0.0.1:%d/readyz"
+elif command -v wget >/dev/null 2>&1; then
+  wget -q -O /dev/null -T 3 "http://127.0.0.1:%d/readyz"
+fi
+`, mountPath, minFreeKiB, port, port)
+
+	return corev1.ProbeHandler{
+		Exec: &corev1.ExecAction{Command: []string{"sh", "-c", script}},
 	}
 }
 
@@ -2526,8 +2672,19 @@ func buildReadinessProbe(instance *openclawv1alpha1.OpenClawInstance) *corev1.Pr
 		return nil
 	}
 
+	// Defense-in-depth: when the opt-in disk-aware guard is enabled, render the
+	// readiness probe as an exec check that combines workspace disk health with
+	// the gateway /readyz signal. Liveness/startup stay HTTP-only.
+	handler := buildHTTPProbeHandler("/readyz", instance)
+	if instance.Spec.Probes != nil && instance.Spec.Probes.DiskReadiness != nil {
+		dr := instance.Spec.Probes.DiskReadiness
+		if dr.Enabled != nil && *dr.Enabled {
+			handler = buildDiskReadinessHandler(dr, instance)
+		}
+	}
+
 	probe := &corev1.Probe{
-		ProbeHandler:        buildHTTPProbeHandler("/readyz", instance),
+		ProbeHandler:        handler,
 		InitialDelaySeconds: 5,
 		PeriodSeconds:       5,
 		TimeoutSeconds:      3,
