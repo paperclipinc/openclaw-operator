@@ -104,7 +104,8 @@ var _ = Describe("Disk-aware readiness guard", func() {
 			Expect(script).To(ContainSubstring(resources.WorkspaceDataMountPath), "exec script should check the default workspace mount")
 			Expect(script).To(ContainSubstring("df -Pk"), "exec script should perform a free-space check")
 			Expect(script).To(ContainSubstring("-w \"$p\""), "exec script should perform a writability check")
-			Expect(script).To(ContainSubstring("134217728"), "exec script should embed the 128Mi threshold in bytes")
+			Expect(script).To(ContainSubstring("131072"), "exec script should embed the 128Mi threshold in KiB")
+			Expect(script).NotTo(ContainSubstring("* 1024"), "exec script must not do awk arithmetic - scientific notation breaks [ -ge ] (#567)")
 			Expect(script).To(ContainSubstring("/readyz"), "exec script should still defer to the gateway /readyz signal")
 
 			By("Verifying liveness and startup probes remain HTTP GET /healthz")
