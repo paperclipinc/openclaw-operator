@@ -2596,24 +2596,29 @@ func buildDiskReadinessHandler(spec *openclawv1alpha1.DiskReadinessSpec, instanc
 		mountPath = WorkspaceDataMountPath
 	}
 	minFree := ParseQuantity(spec.MinFree, DefaultDiskReadinessMinFree)
-	minFreeBytes := minFree.Value()
+	// Compare in KiB, not bytes: df -Pk already reports integer 1K blocks, and
+	// any awk arithmetic on the column ($4 * 1024) can render the result in
+	// scientific notation (OFMT %.6g, e.g. 1.2642e+10 under busybox awk), which
+	// POSIX [ -ge ] rejects with "Illegal number" (#567). Round the threshold
+	// up so a fractional KiB still requires the full requested free space.
+	minFreeKiB := (minFree.Value() + 1023) / 1024
 	port := probeTargetPort(instance)
 
-	// POSIX sh: df -Pk reports 1K blocks; multiply the available column by 1024
-	// to get bytes. Quoting keeps paths with spaces safe. set -e propagates the
-	// first failing check as a non-zero exit (=> NotReady).
+	// POSIX sh: the available column from df -Pk is passed through verbatim as
+	// an integer string. Quoting keeps paths with spaces safe. set -e
+	// propagates the first failing check as a non-zero exit (=> NotReady).
 	script := fmt.Sprintf(`set -e
 p='%s'
 [ -w "$p" ] || exit 1
-avail=$(df -Pk "$p" 2>/dev/null | awk 'NR==2 {print $4 * 1024}')
-[ -n "$avail" ] || exit 1
-[ "$avail" -ge %d ] || exit 1
+avail_kib=$(df -Pk "$p" 2>/dev/null | awk 'NR==2 {print $4}')
+[ -n "$avail_kib" ] || exit 1
+[ "$avail_kib" -ge %d ] || exit 1
 if command -v curl >/dev/null 2>&1; then
   curl -fsS -o /dev/null --max-time 3 "http://127.0.0.1:%d/readyz"
 elif command -v wget >/dev/null 2>&1; then
   wget -q -O /dev/null -T 3 "http://127.0.0.1:%d/readyz"
 fi
-`, mountPath, minFreeBytes, port, port)
+`, mountPath, minFreeKiB, port, port)
 
 	return corev1.ProbeHandler{
 		Exec: &corev1.ExecAction{Command: []string{"sh", "-c", script}},

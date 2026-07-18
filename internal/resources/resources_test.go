@@ -13274,7 +13274,7 @@ func TestBuildStatefulSet_DiskReadiness_EnabledRendersExec(t *testing.T) {
 	script := rp.Exec.Command[2]
 	for _, want := range []string{
 		WorkspaceDataMountPath, // default workspace path
-		"67108864",             // default 64Mi threshold in bytes
+		"65536",                // default 64Mi threshold in KiB
 		"/readyz",              // gateway readiness still checked
 		"df -Pk",               // free-space check
 		"-w \"$p\"",            // writability check
@@ -13315,7 +13315,47 @@ func TestBuildStatefulSet_DiskReadiness_CustomPathAndThreshold(t *testing.T) {
 	if !strings.Contains(script, "'/data/workspace'") {
 		t.Errorf("exec script should check custom path, got:\n%s", script)
 	}
-	if !strings.Contains(script, "1073741824") { // 1Gi in bytes
-		t.Errorf("exec script should use 1Gi threshold in bytes, got:\n%s", script)
+	if !strings.Contains(script, "1048576") { // 1Gi in KiB
+		t.Errorf("exec script should use 1Gi threshold in KiB, got:\n%s", script)
+	}
+}
+
+// Regression test for #567: awk arithmetic ($4 * 1024) renders large results in
+// scientific notation (e.g. 1.2642e+10) under busybox awk, which POSIX
+// [ -ge ] rejects with "Illegal number", leaving healthy instances NotReady.
+// The script must compare the df -Pk available column (an integer string) as
+// KiB and never perform awk arithmetic on it.
+func TestBuildStatefulSet_DiskReadiness_ScriptComparesIntegerKiB(t *testing.T) {
+	instance := newTestInstance("disk-readiness-int")
+	instance.Spec.Probes = &openclawv1alpha1.ProbesSpec{
+		DiskReadiness: &openclawv1alpha1.DiskReadinessSpec{
+			Enabled: Ptr(true),
+			MinFree: "512Mi",
+		},
+	}
+	main := BuildStatefulSet(instance, "", nil, nil, nil).Spec.Template.Spec.Containers[0]
+
+	script := main.ReadinessProbe.Exec.Command[2]
+	if strings.Contains(script, "* 1024") {
+		t.Errorf("exec script must not multiply in awk (scientific notation breaks [ -ge ]), got:\n%s", script)
+	}
+	if !strings.Contains(script, "524288") { // 512Mi = 524288 KiB
+		t.Errorf("exec script should compare against 524288 KiB, got:\n%s", script)
+	}
+}
+
+func TestBuildStatefulSet_DiskReadiness_MinFreeKiBRoundsUp(t *testing.T) {
+	instance := newTestInstance("disk-readiness-round")
+	instance.Spec.Probes = &openclawv1alpha1.ProbesSpec{
+		DiskReadiness: &openclawv1alpha1.DiskReadinessSpec{
+			Enabled: Ptr(true),
+			MinFree: "1025", // 1025 bytes -> must require 2 KiB, not truncate to 1
+		},
+	}
+	main := BuildStatefulSet(instance, "", nil, nil, nil).Spec.Template.Spec.Containers[0]
+
+	script := main.ReadinessProbe.Exec.Command[2]
+	if !strings.Contains(script, "-ge 2 ") && !strings.Contains(script, "-ge 2\n") {
+		t.Errorf("exec script should round the KiB threshold up to 2, got:\n%s", script)
 	}
 }
