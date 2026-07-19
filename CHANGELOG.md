@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.0](https://github.com/paperclipinc/openclaw-operator/compare/v0.37.0...v0.38.0) (2026-07-19)
+
+
+### Features
+
+* **skills:** support declarative skills for additional workspaces ([#570](https://github.com/paperclipinc/openclaw-operator/issues/570)) ([efb202c](https://github.com/paperclipinc/openclaw-operator/commit/efb202ca6d1b30a9daebdf0463a7615973387ca9))
+
 ## [0.37.0](https://github.com/paperclipinc/openclaw-operator/compare/v0.36.5...v0.37.0) (2026-07-18)
 
 
