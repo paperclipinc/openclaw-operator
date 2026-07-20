@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.1](https://github.com/paperclipinc/openclaw-operator/compare/v0.38.0...v0.38.1) (2026-07-20)
+
+
+### Bug Fixes
+
+* gate PhaseRunning on StatefulSetReady so consumers don't route to a not-ready instance ([#572](https://github.com/paperclipinc/openclaw-operator/issues/572)) ([2a1820c](https://github.com/paperclipinc/openclaw-operator/commit/2a1820c6daed065132819b4120ad76c679e373ad))
+
 ## [0.38.0](https://github.com/paperclipinc/openclaw-operator/compare/v0.37.0...v0.38.0) (2026-07-19)
 
 
