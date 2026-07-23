@@ -53,7 +53,7 @@ const (
 	CanvasProxyPort = 18794
 
 	// DefaultGatewayProxyImage is the default image for the gateway proxy sidecar
-	DefaultGatewayProxyImage = "nginx:1.27-alpine"
+	DefaultGatewayProxyImage = "docker.io/library/nginx:1.27-alpine"
 
 	// NginxConfigKey is the ConfigMap data key for the nginx stream config
 	NginxConfigKey = "nginx.conf"
@@ -70,13 +70,18 @@ const (
 	// Previous versions used ghcr.io/browserless/chromium, but browserless's
 	// session management (launch Chrome per connection, kill on disconnect)
 	// is incompatible with Playwright's connectOverCDP -- see #360.
-	DefaultChromiumImage = "chromedp/headless-shell"
+	DefaultChromiumImage = "docker.io/chromedp/headless-shell"
 
 	// DeprecatedChromiumImage is the old browserless image used before v0.22.1.
 	// Instances created with older CRDs have this value stored via kubebuilder
 	// defaults. The builder normalizes it to DefaultChromiumImage at reconcile
 	// time so upgrades work without manual spec edits.
 	DeprecatedChromiumImage = "ghcr.io/browserless/chromium"
+
+	// LegacyChromiumImage is the old unqualified Docker Hub default. Instances
+	// created before fully-qualified defaults may have this value stored by the
+	// API server and should reconcile as the current default image.
+	LegacyChromiumImage = "chromedp/headless-shell"
 
 	// DefaultChromiumTag is the default tag for the Chromium sidecar image.
 	// "stable" tracks the latest Chrome stable channel release.
@@ -180,7 +185,7 @@ const (
 	// DefaultOTelCollectorImage is the default image for the OTel Collector sidecar.
 	// The core distribution is lightweight (~80MB) and includes the OTLP receiver
 	// and Prometheus exporter needed for the metrics pipeline.
-	DefaultOTelCollectorImage = "otel/opentelemetry-collector"
+	DefaultOTelCollectorImage = "docker.io/otel/opentelemetry-collector"
 
 	// DefaultOTelCollectorTag is the default tag for the OTel Collector image
 	DefaultOTelCollectorTag = "0.120.0"
@@ -479,10 +484,10 @@ func ParseQuantity(s, defaultValue string) resource.Quantity {
 //	ApplyRegistryOverride("ghcr.io/openclaw/openclaw:latest", "my-registry.example.com")
 //	→ "my-registry.example.com/openclaw/openclaw:latest"
 //
-//	ApplyRegistryOverride("ollama/ollama:latest", "my-registry.example.com")
+//	ApplyRegistryOverride("docker.io/ollama/ollama:latest", "my-registry.example.com")
 //	→ "my-registry.example.com/ollama/ollama:latest"
 //
-//	ApplyRegistryOverride("nginx:1.27-alpine", "my-registry.example.com")
+//	ApplyRegistryOverride("docker.io/library/nginx:1.27-alpine", "my-registry.example.com")
 //	→ "my-registry.example.com/nginx:1.27-alpine"
 //
 //	ApplyRegistryOverride("ghcr.io/openclaw/openclaw:latest", "")
@@ -492,6 +497,8 @@ func ApplyRegistryOverride(image, registry string) string {
 		return image
 	}
 	registry = strings.TrimRight(registry, "/")
+	image = strings.TrimPrefix(image, "docker.io/library/")
+	image = strings.TrimPrefix(image, "docker.io/")
 
 	slashIndex := strings.Index(image, "/")
 	if slashIndex == -1 {

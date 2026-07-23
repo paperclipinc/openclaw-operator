@@ -574,7 +574,7 @@ func buildInitContainers(instance *openclawv1alpha1.OpenClawInstance, externalWo
 		// overwrite mode uses busybox (lightweight, only needs cp).
 		// Note: ghcr.io/jqlang/jq and ghcr.io/astral-sh/uv base tags are
 		// distroless (no shell), so we cannot use them with "sh -c".
-		initImage := ApplyRegistryOverride("busybox:1.37", instance.Spec.Registry)
+		initImage := ApplyRegistryOverride("docker.io/library/busybox:1.37", instance.Spec.Registry)
 		if instance.Spec.Config.MergeMode == ConfigMergeModeMerge || instance.Spec.Config.Format == ConfigFormatJSON5 {
 			initImage = GetImage(instance)
 		}
@@ -1910,12 +1910,12 @@ func buildChromiumContainer(instance *openclawv1alpha1.OpenClawInstance) corev1.
 		repo = DefaultChromiumImage
 	}
 
-	// Migrate instances created before v0.22.1 that have the old browserless
-	// image stored via kubebuilder defaults. The old image no longer exists
-	// on GHCR, and even if it did, its entrypoint is incompatible with the
-	// Chrome launch flags we pass as container args (#396).
-	if repo == DeprecatedChromiumImage {
-		rLog.Info("migrating deprecated chromium image to default",
+	// Migrate instances with old stored defaults to the current fully-qualified
+	// image. The browserless image no longer exists on GHCR, and even if it did,
+	// its entrypoint is incompatible with the Chrome launch flags we pass as
+	// container args (#396).
+	if repo == DeprecatedChromiumImage || repo == LegacyChromiumImage {
+		rLog.Info("migrating stored chromium image default",
 			"old", repo, "new", DefaultChromiumImage)
 		repo = DefaultChromiumImage
 	}
@@ -2042,7 +2042,7 @@ func buildChromiumContainer(instance *openclawv1alpha1.OpenClawInstance) corev1.
 func buildOllamaContainer(instance *openclawv1alpha1.OpenClawInstance) corev1.Container {
 	repo := instance.Spec.Ollama.Image.Repository
 	if repo == "" {
-		repo = "ollama/ollama"
+		repo = "docker.io/ollama/ollama"
 	}
 
 	tag := instance.Spec.Ollama.Image.Tag
@@ -2309,7 +2309,7 @@ func buildOllamaModelPullInitContainer(instance *openclawv1alpha1.OpenClawInstan
 
 	repo := instance.Spec.Ollama.Image.Repository
 	if repo == "" {
-		repo = "ollama/ollama"
+		repo = "docker.io/ollama/ollama"
 	}
 	tag := instance.Spec.Ollama.Image.Tag
 	if tag == "" {

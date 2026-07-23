@@ -5633,8 +5633,8 @@ func TestBuildStatefulSet_OverwriteMode_BusyboxImage(t *testing.T) {
 	}
 
 	initC := initContainers[0]
-	if initC.Image != "busybox:1.37" {
-		t.Errorf("overwrite mode init container image = %q, want busybox:1.37", initC.Image)
+	if initC.Image != "docker.io/library/busybox:1.37" {
+		t.Errorf("overwrite mode init container image = %q, want docker.io/library/busybox:1.37", initC.Image)
 	}
 }
 
@@ -9255,7 +9255,7 @@ func TestBuildStatefulSet_OllamaEnabled(t *testing.T) {
 	}
 
 	// Ollama image defaults
-	if ollama.Image != "ollama/ollama:latest" {
+	if ollama.Image != "docker.io/ollama/ollama:latest" {
 		t.Errorf("ollama image = %q, want default", ollama.Image)
 	}
 
@@ -12540,6 +12540,28 @@ func TestBuildStatefulSet_ChromiumMigratesDeprecatedImage(t *testing.T) {
 				t.Errorf("chromium image = %q, want %q (should migrate deprecated image)", c.Image, expectedImage)
 			}
 			// After migration to default image, should get the entrypoint wrapper
+			if len(c.Command) != len(ChromiumEntrypointCommand) {
+				t.Errorf("chromium Command after migration = %v, want ChromiumEntrypointCommand", c.Command)
+			}
+			return
+		}
+	}
+	t.Fatal("chromium init container not found")
+}
+
+func TestBuildStatefulSet_ChromiumMigratesLegacyUnqualifiedImage(t *testing.T) {
+	instance := newTestInstance("migrate-unqualified-img")
+	instance.Spec.Chromium.Enabled = true
+	instance.Spec.Chromium.Image.Repository = LegacyChromiumImage
+	instance.Spec.Chromium.Image.Tag = "latest"
+
+	sts := BuildStatefulSet(instance, "", nil, nil, nil)
+	for _, c := range sts.Spec.Template.Spec.InitContainers {
+		if c.Name == "chromium" {
+			expectedImage := DefaultChromiumImage + ":" + DefaultChromiumTag
+			if c.Image != expectedImage {
+				t.Errorf("chromium image = %q, want %q (should migrate legacy unqualified image)", c.Image, expectedImage)
+			}
 			if len(c.Command) != len(ChromiumEntrypointCommand) {
 				t.Errorf("chromium Command after migration = %v, want ChromiumEntrypointCommand", c.Command)
 			}
