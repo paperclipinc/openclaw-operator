@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.0](https://github.com/paperclipinc/openclaw-operator/compare/v0.39.0...v0.40.0) (2026-09-06)
+
+
+### Features
+
+* configure gateway proxy container ([#601](https://github.com/paperclipinc/openclaw-operator/issues/601)) ([61a513f](https://github.com/paperclipinc/openclaw-operator/commit/61a513fd05a230edab1e68dda6d10cfb1ed0c2d0))
+* configure OpenTelemetry collector sidecar ([#597](https://github.com/paperclipinc/openclaw-operator/issues/597)) ([c83576c](https://github.com/paperclipinc/openclaw-operator/commit/c83576ccb469827f6a8cddc6f97eec3fbcfdf62f))
+* configure uv bootstrap image ([#602](https://github.com/paperclipinc/openclaw-operator/issues/602)) ([fa0cd90](https://github.com/paperclipinc/openclaw-operator/commit/fa0cd90557f57987209a57b91fd22719df08081c))
+* make same-namespace ingress optional ([#599](https://github.com/paperclipinc/openclaw-operator/issues/599)) ([9a9fc70](https://github.com/paperclipinc/openclaw-operator/commit/9a9fc705214855f952e74421f83db26859f25dd4))
+
+
+### Bug Fixes
+
+* select PVC alert claims from storage mode ([#598](https://github.com/paperclipinc/openclaw-operator/issues/598)) ([2a90578](https://github.com/paperclipinc/openclaw-operator/commit/2a905782e56e634404068e8fe4a0c979a2a8bfa0))
+* stop injecting retired browser config fields ([#603](https://github.com/paperclipinc/openclaw-operator/issues/603)) ([208bdfb](https://github.com/paperclipinc/openclaw-operator/commit/208bdfb4d25fcd7d4b082324eb82946307b54285))
+* stop injecting retired device auth flag ([#600](https://github.com/paperclipinc/openclaw-operator/issues/600)) ([8d52e07](https://github.com/paperclipinc/openclaw-operator/commit/8d52e07e67ad256f8b3fb4dba874c88a4bbcd18a))
+
 ## [0.39.0](https://github.com/paperclipinc/openclaw-operator/compare/v0.38.3...v0.39.0) (2026-08-12)
 
 
